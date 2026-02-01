@@ -1,0 +1,67 @@
+{
+  "hash": "d507e312",
+  "configHash": "43685558",
+  "lockfileHash": "116a536c",
+  "browserHash": "9c8f06f8",
+  "optimized": {
+    "@emotion/is-prop-valid": {
+      "src": "../../node_modules/@emotion/is-prop-valid/dist/is-prop-valid.browser.esm.js",
+      "file": "@emotion_is-prop-valid.js",
+      "fileHash": "4727b0b6",
+      "needsInterop": false
+    },
+    "react": {
+      "src": "../../node_modules/react/index.js",
+      "file": "react.js",
+      "fileHash": "e4208c7a",
+      "needsInterop": true
+    },
+    "react-dom/client": {
+      "src": "../../node_modules/react-dom/client.js",
+      "file": "react-dom_client.js",
+      "fileHash": "4651427c",
+      "needsInterop": true
+    },
+    "react-router-dom": {
+      "src": "../../node_modules/react-router-dom/dist/index.js",
+      "file": "react-router-dom.js",
+      "fileHash": "fa617d1a",
+      "needsInterop": false
+    },
+    "framer-motion": {
+      "src": "../../node_modules/framer-motion/dist/es/index.mjs",
+      "file": "framer-motion.js",
+      "fileHash": "415f353d",
+      "needsInterop": false
+    },
+    "react-chartjs-2": {
+      "src": "../../node_modules/react-chartjs-2/dist/index.js",
+      "file": "react-chartjs-2.js",
+      "fileHash": "65d823d7",
+      "needsInterop": false
+    },
+    "chart.js": {
+      "src": "../../node_modules/chart.js/dist/chart.js",
+      "file": "chart__js.js",
+      "fileHash": "10e9fbb0",
+      "needsInterop": false
+    }
+  },
+  "chunks": {
+    "chunk-UHINIFCJ": {
+      "file": "chunk-UHINIFCJ.js"
+    },
+    "chunk-W4EHDCLL": {
+      "file": "chunk-W4EHDCLL.js"
+    },
+    "chunk-4PGPD6VS": {
+      "file": "chunk-4PGPD6VS.js"
+    },
+    "chunk-KWT2DJ4I": {
+      "file": "chunk-KWT2DJ4I.js"
+    },
+    "chunk-EWTE5DHJ": {
+      "file": "chunk-EWTE5DHJ.js"
+    }
+  }
+}
