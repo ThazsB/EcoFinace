@@ -2,7 +2,7 @@
   "name": "ecofinance",
   "private": true,
   "version": "0.0.0",
-  "homepage": "https://thazsb.github.io/EcoFinance/",
+  "homepage": "https://thazsb.github.io/EcoFinace/",
   "type": "module",
   "scripts": {
     "dev": "vite --port 48367",
