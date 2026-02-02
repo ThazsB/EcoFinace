@@ -1,18 +1,27 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '@/stores/authStore';
 import { useAppStore } from '@/stores/appStore';
+import { Camera, X } from 'lucide-react';
 
 export default function Settings() {
   const navigate = useNavigate();
-  const { user, logout } = useAuthStore();
+  const { user, logout, updateProfile } = useAuthStore();
   const { data, init } = useAppStore();
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
   const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
+  const [activeTab, setActiveTab] = useState<'general'>('general');
+  const [editName, setEditName] = useState(user?.name || '');
+  const [editAvatar, setEditAvatar] = useState(user?.avatar || '');
+  const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
     if (user) {
       init(user.id);
+      setEditName(user.name || '');
+      setEditAvatar(user.avatar || '');
     }
   }, [user, init]);
 
@@ -20,6 +29,52 @@ export default function Settings() {
     if (confirm('Tem certeza que deseja sair?')) {
       logout();
       navigate('/profile-selection', { replace: true });
+    }
+  };
+
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      if (!file.type.startsWith('image/')) {
+        alert('Por favor, selecione um arquivo de imagem válido.');
+        return;
+      }
+      
+      if (file.size > 5 * 1024 * 1024) {
+        alert('A imagem deve ter no máximo 5MB.');
+        return;
+      }
+
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        const base64 = event.target?.result as string;
+        setEditAvatar(base64);
+        setAvatarPreview(base64);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleRemoveImage = () => {
+    setEditAvatar('👤');
+    setAvatarPreview(null);
+  };
+
+  const handleSaveProfile = async () => {
+    if (!user) return;
+    
+    setIsSaving(true);
+    try {
+      await updateProfile(user.id, {
+        name: editName,
+        avatar: editAvatar
+      });
+      setIsProfileModalOpen(false);
+      setAvatarPreview(null);
+    } catch (error) {
+      alert('Erro ao salvar perfil. Tente novamente.');
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -32,99 +87,139 @@ export default function Settings() {
         </div>
       </div>
 
-      {/* Profile Card */}
-      <div className="bg-card p-6 rounded-lg border border-border">
-        <h2 className="text-lg font-semibold mb-4">Perfil</h2>
-        
-        <div className="flex items-center gap-4 mb-6">
-          <div className="w-20 h-20 rounded-full bg-primary/20 flex items-center justify-center text-4xl overflow-hidden">
-            {user?.avatar?.startsWith('data:image/') ? (
-              <img src={user.avatar} alt="" className="w-full h-full object-cover" />
-            ) : (
-              <span>{user?.avatar || '👤'}</span>
-            )}
-          </div>
-          
-          <div>
-            <p className="text-xl font-bold">{user?.name}</p>
-            <p className="text-muted-foreground">
-              Membro desde {new Date(user?.createdAt || '').toLocaleDateString('pt-BR')}
-            </p>
-          </div>
-        </div>
-
-        <div className="space-y-4">
-          <button
-            onClick={() => setIsProfileModalOpen(true)}
-            className="w-full px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors"
-          >
-            Editar Perfil
-          </button>
-
-          <button
-            onClick={() => setIsPasswordModalOpen(true)}
-            className="w-full px-4 py-2 bg-muted rounded-lg hover:bg-muted/80 transition-colors"
-          >
-            Alterar Senha
-          </button>
-
-          <button
-            onClick={handleLogout}
-            className="w-full px-4 py-2 bg-red-500/10 text-red-500 rounded-lg hover:bg-red-500/20 transition-colors"
-          >
-            Sair
-          </button>
-        </div>
+      {/* Tabs */}
+      <div className="flex gap-2 border-b border-border">
+        <button
+          onClick={() => setActiveTab('general')}
+          className={`px-4 py-2 border-b-2 transition-colors ${
+            activeTab === 'general' 
+              ? 'border-primary text-primary' 
+              : 'border-transparent text-muted-foreground hover:text-foreground'
+          }`}
+        >
+          Geral
+        </button>
       </div>
 
-      {/* App Info */}
-      <div className="bg-card p-6 rounded-lg border border-border">
-        <h2 className="text-lg font-semibold mb-4">Informações do Aplicativo</h2>
-        
-        <div className="space-y-2">
-          <div className="flex justify-between">
-            <span className="text-muted-foreground">Version</span>
-            <span className="font-medium">1.0.0</span>
-          </div>
-          
-          <div className="flex justify-between">
-            <span className="text-muted-foreground">Data de Criação</span>
-            <span className="font-medium">2024-01-01</span>
-          </div>
-          
-          <div className="flex justify-between">
-            <span className="text-muted-foreground">Última Atualização</span>
-            <span className="font-medium">2024-01-01</span>
-          </div>
-        </div>
-      </div>
+      {/* Tab: Geral */}
+      {activeTab === 'general' && (
+        <>
+          {/* Profile Card */}
+          <div className="bg-card p-6 rounded-lg border border-border">
+            <h2 className="text-lg font-semibold mb-4">Perfil</h2>
+            
+            <div className="flex items-center gap-4 mb-6">
+              <div className="w-20 h-20 rounded-full bg-primary/20 flex items-center justify-center text-4xl overflow-hidden">
+                {user?.avatar?.startsWith('data:image/') ? (
+                  <img src={user.avatar} alt="" className="w-full h-full object-cover" />
+                ) : (
+                  <span>{user?.avatar || '👤'}</span>
+                )}
+              </div>
+              
+              <div>
+                <p className="text-xl font-bold">{user?.name}</p>
+                <p className="text-muted-foreground">
+                  Membro desde {new Date(user?.createdAt || '').toLocaleDateString('pt-BR')}
+                </p>
+              </div>
+            </div>
 
-      {/* Data Storage */}
-      <div className="bg-card p-6 rounded-lg border border-border">
-        <h2 className="text-lg font-semibold mb-4">Armazenamento de Dados</h2>
-        
-        <div className="space-y-2">
-          <div className="flex justify-between">
-            <span className="text-muted-foreground">Total de Transações</span>
-            <span className="font-medium">{data.transactions.length}</span>
+            <div className="space-y-4">
+              <button
+                onClick={() => setIsProfileModalOpen(true)}
+                className="w-full px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors"
+              >
+                Editar Perfil
+              </button>
+
+              <button
+                onClick={() => setIsPasswordModalOpen(true)}
+                className="w-full px-4 py-2 bg-muted rounded-lg hover:bg-muted/80 transition-colors"
+              >
+                Alterar Senha
+              </button>
+
+              <button
+                onClick={handleLogout}
+                className="w-full px-4 py-2 bg-red-500/10 text-red-500 rounded-lg hover:bg-red-500/20 transition-colors"
+              >
+                Sair
+              </button>
+            </div>
           </div>
-          
-          <div className="flex justify-between">
-            <span className="text-muted-foreground">Total de Metas</span>
-            <span className="font-medium">{data.goals.length}</span>
+
+          {/* App Info */}
+          <div className="bg-card p-6 rounded-lg border border-border">
+            <h2 className="text-lg font-semibold mb-4">Informações do Aplicativo</h2>
+            
+            <div className="space-y-2">
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Versão</span>
+                <span className="font-medium">1.0.0</span>
+              </div>
+              
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Data de Criação</span>
+                <span className="font-medium">2024-01-01</span>
+              </div>
+              
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Última Atualização</span>
+                <span className="font-medium">2024-01-01</span>
+              </div>
+            </div>
           </div>
-          
-          <div className="flex justify-between">
-            <span className="text-muted-foreground">Total de Orçamentos</span>
-            <span className="font-medium">{data.budgets.length}</span>
+
+          {/* Data Storage */}
+          <div className="bg-card p-6 rounded-lg border border-border">
+            <h2 className="text-lg font-semibold mb-4">Armazenamento de Dados</h2>
+            
+            <div className="space-y-2">
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Total de Transações</span>
+                <span className="font-medium">{data.transactions.length}</span>
+              </div>
+              
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Total de Metas</span>
+                <span className="font-medium">{data.goals.length}</span>
+              </div>
+              
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Total de Orçamentos</span>
+                <span className="font-medium">{data.budgets.length}</span>
+              </div>
+              
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Categorias Personalizadas</span>
+                <span className="font-medium">{data.categories.length}</span>
+              </div>
+            </div>
           </div>
-          
-          <div className="flex justify-between">
-            <span className="text-muted-foreground">Categorias Personalizadas</span>
-            <span className="font-medium">{data.categories.length}</span>
+
+          {/* Armazenamento Local */}
+          <div className="bg-card p-6 rounded-lg border border-border">
+            <h2 className="text-lg font-semibold mb-4">Armazenamento Local</h2>
+            
+            <div className="space-y-2">
+              <p className="text-muted-foreground">
+                Os dados são salvos localmente no navegador e persistem entre sessões.
+              </p>
+              
+              <div className="flex items-center gap-2 text-sm">
+                <span className="w-2 h-2 rounded-full bg-green-500"></span>
+                <span>LocalStorage ativo</span>
+              </div>
+              
+              <div className="flex items-center gap-2 text-sm">
+                <span className="w-2 h-2 rounded-full bg-blue-500"></span>
+                <span>IndexedDB disponível</span>
+              </div>
+            </div>
           </div>
-        </div>
-      </div>
+        </>
+      )}
 
       {/* Edit Profile Modal */}
       {isProfileModalOpen && (
@@ -137,34 +232,80 @@ export default function Settings() {
                 <label className="block text-sm font-medium mb-2">Nome</label>
                 <input
                   type="text"
-                  defaultValue={user?.name}
+                  value={editName}
+                  onChange={(e) => setEditName(e.target.value)}
                   className="w-full px-4 py-2 bg-muted rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
                 />
               </div>
 
               <div>
                 <label className="block text-sm font-medium mb-2">Avatar</label>
+                
+                {/* Preview da imagem */}
+                <div className="flex items-center gap-4 mb-3">
+                  <div className="w-20 h-20 rounded-full bg-primary/20 flex items-center justify-center text-4xl overflow-hidden border-2 border-border">
+                    {avatarPreview || (editAvatar?.startsWith('data:image/') ? (
+                      <img src={editAvatar} alt="Avatar" className="w-full h-full object-cover" />
+                    ) : (
+                      <span>{editAvatar || '👤'}</span>
+                    ))}
+                  </div>
+                  
+                  <div className="flex gap-2">
+                    <button
+                      type="button"
+                      onClick={() => fileInputRef.current?.click()}
+                      className="px-3 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors flex items-center gap-2"
+                    >
+                      <Camera className="w-4 h-4" />
+                      Selecionar Imagem
+                    </button>
+                    
+                    {avatarPreview || (editAvatar?.startsWith('data:image/')) ? (
+                      <button
+                        type="button"
+                        onClick={handleRemoveImage}
+                        className="px-3 py-2 bg-muted rounded-lg hover:bg-muted/80 transition-colors flex items-center gap-2"
+                      >
+                        <X className="w-4 h-4" />
+                        Remover
+                      </button>
+                    ) : null}
+                  </div>
+                </div>
+                
                 <input
-                  type="text"
-                  defaultValue={user?.avatar}
-                  className="w-full px-4 py-2 bg-muted rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/*"
+                  onChange={handleFileSelect}
+                  className="hidden"
                 />
+                
+                <p className="text-xs text-muted-foreground">
+                  Formatos aceitos: JPG, PNG, GIF. Tamanho máximo: 5MB
+                </p>
               </div>
 
               <div className="flex gap-3 pt-2">
                 <button
                   type="button"
-                  onClick={() => setIsProfileModalOpen(false)}
+                  onClick={() => {
+                    setIsProfileModalOpen(false);
+                    setAvatarPreview(null);
+                    setEditAvatar(user?.avatar || '');
+                  }}
                   className="flex-1 px-4 py-2 bg-muted rounded-lg hover:bg-muted/80 transition-colors"
                 >
                   Cancelar
                 </button>
                 <button
                   type="button"
-                  onClick={() => setIsProfileModalOpen(false)}
-                  className="flex-1 px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors"
+                  onClick={handleSaveProfile}
+                  disabled={isSaving || !editName.trim()}
+                  className="flex-1 px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  Salvar
+                  {isSaving ? 'Salvando...' : 'Salvar'}
                 </button>
               </div>
             </div>

@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Logo } from '../ui/Logo';
 import { FirstAccessScreen } from './FirstAccessScreen';
@@ -6,7 +6,6 @@ import { PasswordInput } from './PasswordInput';
 import { ProfileCard } from './ProfileCard';
 import { DeleteProfileModal } from './DeleteProfileModal';
 import { useAuthStore } from '../../stores/authStore';
-import { useNotificationsStore } from '../../stores/notificationsStore';
 import type { Profile } from '../../types';
 
 type AuthView = 'profiles' | 'password' | 'first-access';
@@ -26,8 +25,8 @@ export function LoginScreen() {
   const [profileToDelete, setProfileToDelete] = useState<string | null>(null);
   
   const { user, login } = useAuthStore();
-  const { addNotification } = useNotificationsStore();
   const hasLoaded = useRef(false);
+  const lastActivityCache = useRef<Map<string, number>>(new Map());
 
   // Carregar perfis do localStorage
   useEffect(() => {
@@ -57,11 +56,7 @@ export function LoginScreen() {
     }
   }, [user]);
 
-  // Log de debug para view
-  useEffect(() => {
-    console.log('view mudou para:', view);
-  }, [view]);
-
+  // Callback functions
   const handleSelectProfile = useCallback((profileId: string) => {
     const profile = profiles.find(p => p.id === profileId);
     if (profile) {
@@ -75,7 +70,6 @@ export function LoginScreen() {
   }, [profiles]);
 
   const handleBackToProfiles = useCallback(() => {
-    console.log('handleBackToProfiles chamado');
     setSelectedProfileId(null);
     setSelectedProfile(null);
     setView('profiles');
@@ -99,26 +93,14 @@ export function LoginScreen() {
 
     const success = await login(selectedProfile.id, password);
     
-    if (success) {
-      addNotification(
-        'Bem-vindo!',
-        `Olá, ${selectedProfile.name}!`,
-        'success'
-      );
-    } else {
+    if (!success) {
       setError('invalid');
       setErrorMessage('Senha incorreta. Tente novamente.');
       setPassword('');
-      
-      addNotification(
-        'Erro de autenticação',
-        'Senha incorreta. Verifique e tente novamente.',
-        'error'
-      );
     }
     
     setIsAuthenticating(false);
-  }, [password, selectedProfile, login, addNotification]);
+  }, [password, selectedProfile, login]);
 
   const handleConfirmDelete = useCallback(async (_password: string): Promise<boolean> => {
     if (!profileToDelete) return false;
@@ -136,28 +118,41 @@ export function LoginScreen() {
       handleBackToProfiles();
     }
     
-    addNotification(
-      'Perfil excluído',
-      'O perfil foi removido com sucesso.',
-      'success'
-    );
-    
     setShowDeleteModal(false);
     setProfileToDelete(null);
     return true;
-  }, [profileToDelete, profiles, selectedProfileId, handleBackToProfiles, addNotification]);
+  }, [profileToDelete, profiles, selectedProfileId, handleBackToProfiles]);
 
   // Obter perfil a ser excluído
   const profileToDeleteData = profileToDelete 
     ? profiles.find(p => p.id === profileToDelete) 
     : null;
 
-  // Ordenar perfis por última atividade (mais recentes primeiro)
-  const sortedProfiles = [...profiles].sort((a, b) => {
-    const lastActivityA = parseInt(localStorage.getItem(`ecofinance_${a.id}_lastActivity`) || '0');
-    const lastActivityB = parseInt(localStorage.getItem(`ecofinance_${b.id}_lastActivity`) || '0');
-    return lastActivityB - lastActivityA;
-  });
+  // Obter último perfil acessado
+  const lastAccessedProfile = useMemo(() => {
+    const activeProfileId = localStorage.getItem('ecofinance_active_profile');
+    if (activeProfileId) {
+      return profiles.find(p => p.id === activeProfileId) || null;
+    }
+    return null;
+  }, [profiles]);
+
+  // Memoizar ordenação dos perfis para evitar re-renderizações desnecessárias
+  const sortedProfiles = useMemo(() => {
+    // Preencher cache se ainda não existe
+    profiles.forEach(profile => {
+      if (!lastActivityCache.current.has(profile.id)) {
+        const lastActivity = localStorage.getItem(`ecofinance_${profile.id}_lastActivity`);
+        lastActivityCache.current.set(profile.id, parseInt(lastActivity || '0'));
+      }
+    });
+    
+    return [...profiles].sort((a, b) => {
+      const lastActivityA = lastActivityCache.current.get(a.id) || 0;
+      const lastActivityB = lastActivityCache.current.get(b.id) || 0;
+      return lastActivityB - lastActivityA;
+    });
+  }, [profiles]);
 
   return (
     <div 
@@ -199,20 +194,30 @@ export function LoginScreen() {
               </div>
 
               {/* Área de autenticação */}
-              <AnimatePresence>
+              <AnimatePresence mode="wait">
                 {view === 'password' && selectedProfile ? (
                   <motion.div
                     key="password-panel"
-                    initial={{ opacity: 0, y: -20 }}
+                    initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, y: -20 }}
+                    transition={{ 
+                      duration: 0.25,
+                      ease: 'easeOut'
+                    }}
                     className="mb-8"
                   >
                     {/* Perfil selecionado */}
                     <div className="flex items-center justify-center mb-6">
                       <motion.div
-                        initial={{ scale: 0 }}
-                        animate={{ scale: 1 }}
+                        initial={{ scale: 0, rotate: -10 }}
+                        animate={{ scale: 1, rotate: 0 }}
+                        transition={{ 
+                          type: 'spring',
+                          stiffness: 500,
+                          damping: 15,
+                          delay: 0
+                        }}
                         className="text-center"
                       >
                         <div
@@ -225,30 +230,46 @@ export function LoginScreen() {
                             selectedProfile.avatar
                           )}
                         </div>
-                        <p className="text-xl font-semibold">{selectedProfile.name}</p>
+                        <motion.p
+                          initial={{ opacity: 0, y: 10 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          transition={{ delay: 0.05 }}
+                          className="text-xl font-semibold"
+                        >
+                          {selectedProfile.name}
+                        </motion.p>
                       </motion.div>
                     </div>
 
                     {/* Campo de senha */}
                     <div className="max-w-md mx-auto">
-                      <PasswordInput
-                        value={password}
-                        onChange={(value) => {
-                          setPassword(value);
-                          if (error !== 'none') {
-                            setError('none');
-                            setErrorMessage('');
-                          }
-                        }}
-                        onSubmit={handleLogin}
-                        error={error !== 'none' ? errorMessage : undefined}
-                        isLoading={isAuthenticating}
-                        autoFocus
-                        placeholder="Digite sua senha"
-                      />
+                      <motion.div
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: 0.05 }}
+                      >
+                        <PasswordInput
+                          value={password}
+                          onChange={(value) => {
+                            setPassword(value);
+                            if (error !== 'none') {
+                              setError('none');
+                              setErrorMessage('');
+                            }
+                          }}
+                          onSubmit={handleLogin}
+                          error={error !== 'none' ? errorMessage : undefined}
+                          isLoading={isAuthenticating}
+                          autoFocus
+                          placeholder="Digite sua senha"
+                        />
+                      </motion.div>
 
                       {/* Botão de entrar */}
                       <motion.button
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: 0.08 }}
                         whileHover={{ scale: 1.02 }}
                         whileTap={{ scale: 0.98 }}
                         onClick={handleLogin}
@@ -267,54 +288,125 @@ export function LoginScreen() {
                     </div>
 
                     {/* Voltar */}
-                    <button
+                    <motion.button
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      transition={{ delay: 0.1 }}
                       onClick={handleBackToProfiles}
                       className="block mx-auto mt-6 text-sm text-muted-foreground hover:text-foreground transition-colors"
                     >
                       Voltar para perfis
-                    </button>
+                    </motion.button>
                   </motion.div>
                 ) : (
                   <motion.div
                     key="profiles-panel"
-                    initial={{ opacity: 0, x: 20 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    exit={{ opacity: 0, x: -20 }}
+                    initial={{ opacity: 0, y: 40, scale: 0.95 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    exit={{ opacity: 0, y: -20, scale: 0.95 }}
+                    transition={{ 
+                      type: 'spring',
+                      stiffness: 400,
+                      damping: 20,
+                      mass: 0.8
+                    }}
                     className="w-full"
                   >
+                    {/* Último perfil acessado */}
+                    {lastAccessedProfile && (
+                      <motion.div
+                        initial={{ opacity: 0, y: -10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: 0.1 }}
+                        className="mb-6"
+                      >
+                        <div className="flex items-center gap-2 text-sm text-muted-foreground mb-3">
+                          <svg className="w-4 h-4" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <circle cx="12" cy="12" r="10" />
+                            <polyline points="12 6 12 12 16 14" />
+                          </svg>
+                          <span>Último perfil acessado</span>
+                        </div>
+                        <motion.button
+                          whileHover={{ scale: 1.02 }}
+                          whileTap={{ scale: 0.98 }}
+                          onClick={() => handleSelectProfile(lastAccessedProfile.id)}
+                          className="w-full max-w-md mx-auto flex items-center gap-4 p-4 rounded-xl bg-muted/50 hover:bg-muted border border-border transition-all"
+                        >
+                          <div
+                            className="w-12 h-12 rounded-full flex items-center justify-center text-2xl overflow-hidden"
+                            style={{ backgroundColor: `${lastAccessedProfile.color}20` }}
+                          >
+                            {lastAccessedProfile.avatar.startsWith('data:image/') ? (
+                              <img src={lastAccessedProfile.avatar} alt="" className="w-full h-full object-cover" />
+                            ) : (
+                              lastAccessedProfile.avatar
+                            )}
+                          </div>
+                          <div className="flex-1 text-left">
+                            <p className="font-medium text-foreground">{lastAccessedProfile.name}</p>
+                            <p className="text-xs text-muted-foreground">Clique para acessar</p>
+                          </div>
+                          <svg className="w-5 h-5 text-muted-foreground" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <path d="M5 12h14" />
+                            <path d="m12 5 7 7-7 7" />
+                          </svg>
+                        </motion.button>
+                      </motion.div>
+                    )}
+
                     {/* Lista de perfis */}
                     <div className={`grid gap-4 mb-8 ${sortedProfiles.length === 0 ? 'grid-cols-1' : 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3'} ${sortedProfiles.length === 0 ? 'max-w-sm mx-auto' : ''}`}>
-                      {sortedProfiles.map((profile) => (
-                        <ProfileCard
+                      {sortedProfiles.map((profile, index) => (
+                        <motion.div
                           key={profile.id}
-                          profile={profile}
-                          isSelected={selectedProfileId === profile.id}
-                          onClick={() => handleSelectProfile(profile.id)}
-                          onDelete={(id) => {
-                            setProfileToDelete(id);
-                            setShowDeleteModal(true);
+                          initial={{ opacity: 0, y: 20 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          transition={{ 
+                            type: 'spring',
+                            stiffness: 400,
+                            damping: 20,
+                            delay: index * 0.05
                           }}
-                        />
+                        >
+                          <ProfileCard
+                            profile={profile}
+                            isSelected={selectedProfileId === profile.id}
+                            onClick={() => handleSelectProfile(profile.id)}
+                            onDelete={(id) => {
+                              setProfileToDelete(id);
+                              setShowDeleteModal(true);
+                            }}
+                          />
+                        </motion.div>
                       ))}
 
                       {/* Criar novo perfil */}
                       <motion.button
-                        whileHover={{ scale: 1.02 }}
+                        initial={{ opacity: 0, y: 15 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -15 }}
+                        whileHover={{ scale: 1.02, y: -2 }}
                         whileTap={{ scale: 0.98 }}
+                        transition={{ 
+                          duration: 0.3,
+                          ease: 'easeOut',
+                          delay: sortedProfiles.length * 0.05
+                        }}
                         onClick={() => setView('first-access')}
-                        className="flex flex-col items-center justify-center p-6 rounded-xl border-2 border-dashed border-border hover:border-primary/50 hover:bg-muted/50 transition-all group"
+                        className="flex flex-col items-center justify-center p-6 rounded-2xl border-2 border-dashed border-border hover:border-primary/50 hover:bg-muted/50 transition-all group"
                       >
-                        <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mb-3 group-hover:bg-primary/20 transition-colors">
-                          <svg className="w-8 h-8 text-primary" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <div className="w-14 h-14 rounded-full bg-primary/10 flex items-center justify-center mb-3 group-hover:bg-primary/20 transition-colors">
+                          <svg className="w-6 h-6 text-primary" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                             <path d="M5 12h14" />
                             <path d="M12 5v14" />
                           </svg>
                         </div>
-                        <span className="font-medium group-hover:text-primary transition-colors">
-                          Criar Novo Perfil
+                        <span className="font-medium group-hover:text-primary transition-colors text-sm">
+                          Criar Novo
                         </span>
-                        <span className="text-sm text-muted-foreground mt-1">
-                          Adicione um novo usuário
+                        <span className="text-xs text-muted-foreground mt-1">
+                          Adicionar perfil
                         </span>
                       </motion.button>
                     </div>

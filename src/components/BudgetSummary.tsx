@@ -35,10 +35,6 @@ export function BudgetSummary({ budgets, transactions }: BudgetSummaryProps) {
     };
   });
 
-  // Debug information
-  console.log('BudgetStatus:', budgetStatus);
-  console.log('Transactions:', monthlyTransactions);
-
   return (
     <div className="space-y-6">
       {budgetStatus.map((budget) => (

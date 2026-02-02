@@ -1,6 +1,5 @@
 import { create } from 'zustand';
 import { Transaction, Budget, Goal, AppData, DEFAULT_CATEGORIES } from '@/types';
-import { useNotificationsStore, initializeNotificationsStore } from '@/stores/notificationsStore';
 
 interface AppState {
   data: Omit<AppData, 'notifications'>;
@@ -47,12 +46,8 @@ export const useAppStore = create<AppState>((set, get) => ({
           categories
         }
       });
-
-      // Initialize notifications store
-      initializeNotificationsStore(profileId);
-      useNotificationsStore.getState().loadNotifications(profileId);
-    } catch (error) {
-      console.error('Init app data error:', error);
+    } catch {
+      // Silently fail on init
     } finally {
       set({ loading: false });
     }

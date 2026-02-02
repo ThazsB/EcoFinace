@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useAuthStore } from '@/stores/authStore'
 import { useAppStore } from '@/stores/appStore'
-import { useNotificationsStore } from '@/stores/notificationsStore'
 import { formatCurrency } from '@/utils/currency'
 import { PieChart, LineChart } from '../components/charts'
 import { TransactionList } from '../components/TransactionList'
@@ -10,7 +9,6 @@ import { BudgetSummary } from '../components/BudgetSummary'
 export default function Dashboard() {
   const { user } = useAuthStore()
   const { data, init, loading } = useAppStore()
-  const { checkBudgetAlerts, checkGoalAlerts } = useNotificationsStore()
   const [currentMonth] = useState(new Date().toLocaleString('pt-BR', { month: 'long', year: 'numeric' }))
 
   useEffect(() => {
@@ -18,29 +16,6 @@ export default function Dashboard() {
       init(user.id)
     }
   }, [user, init])
-
-  // Check notifications when data is loaded
-  useEffect(() => {
-    if (data.transactions.length > 0 && data.budgets.length > 0) {
-      // Calculate budgets status
-      const budgetsStatus = data.budgets.map(budget => {
-        const spent = data.transactions
-          .filter(tx => tx.type === 'expense' && tx.category === budget.category)
-          .reduce((sum, tx) => sum + tx.amount, 0);
-        return {
-          category: budget.category,
-          limit: budget.limit,
-          spent: spent
-        };
-      });
-
-      checkBudgetAlerts(budgetsStatus);
-    }
-
-    if (data.goals.length > 0) {
-      checkGoalAlerts(data.goals);
-    }
-  }, [data.transactions, data.budgets, data.goals, checkBudgetAlerts, checkGoalAlerts])
 
   if (loading) {
     return (

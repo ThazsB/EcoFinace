@@ -1,4 +1,4 @@
-import React, { createContext, useContext, ReactNode } from 'react';
+import React, { createContext, useContext, ReactNode, useEffect } from 'react';
 import { Profile } from '@/types';
 import { useAuthStore } from '@/stores/authStore';
 
@@ -15,7 +15,26 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-  const { user, loading, login, logout, createProfile, updateProfile, deleteProfile } = useAuthStore();
+  const { user, loading, login, logout, createProfile, updateProfile, deleteProfile, profiles } = useAuthStore();
+
+  // Carregar usuário ativo do localStorage ao inicializar
+  useEffect(() => {
+    console.log('[AuthContext] useEffect triggered, profiles.length:', profiles.length)
+    const activeProfileId = localStorage.getItem('ecofinance_active_profile');
+    console.log('[AuthContext] activeProfileId:', activeProfileId)
+    if (activeProfileId && profiles.length > 0) {
+      const activeProfile = profiles.find((p: Profile) => p.id === activeProfileId);
+      console.log('[AuthContext] activeProfile:', activeProfile)
+      if (activeProfile) {
+        console.log('[AuthContext] Setting user:', activeProfile.name)
+        useAuthStore.setState({ user: activeProfile });
+      } else {
+        console.log('[AuthContext] Active profile not found in profiles')
+      }
+    } else {
+      console.log('[AuthContext] Skipping (no activeProfileId or no profiles)')
+    }
+  }, [profiles]); // Depende de profiles para garantir que sejam carregados
 
   return (
     <AuthContext.Provider value={{

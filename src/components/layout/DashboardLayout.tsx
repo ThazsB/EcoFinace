@@ -1,9 +1,8 @@
-import { useState } from 'react'
+/* eslint-disable @typescript-eslint/no-unused-vars */
+import { useState, useEffect } from 'react'
 import { Outlet, useLocation, useNavigate } from 'react-router-dom'
-import { LayoutDashboard, ArrowLeftRight, Target, Flag, BarChart3, Settings, Bell } from 'lucide-react'
+import { LayoutDashboard, ArrowLeftRight, Target, Flag, BarChart3, Settings } from 'lucide-react'
 import { useAuthStore } from '@/stores/authStore'
-import { useNotificationsStore } from '@/stores/notificationsStore'
-import { NotificationCenter } from '@/components/NotificationCenter'
 import { Logo } from '@/components/ui/Logo'
 
 const navItems = [
@@ -19,8 +18,6 @@ export function DashboardLayout() {
   const location = useLocation()
   const navigate = useNavigate()
   const { user } = useAuthStore()
-  const { unreadCount } = useNotificationsStore()
-  const [isNotificationCenterOpen, setIsNotificationCenterOpen] = useState(false)
 
   return (
     <div className="flex h-screen w-full bg-background text-foreground">
@@ -76,17 +73,6 @@ export function DashboardLayout() {
           </div>
 
           <div className="flex items-center gap-4">
-            {/* Notifications Button */}
-            <button
-              onClick={() => setIsNotificationCenterOpen(!isNotificationCenterOpen)}
-              className="p-2 rounded-full hover:bg-muted transition-colors relative"
-            >
-              <Bell className="h-5 w-5" />
-              {unreadCount > 0 && (
-                <span className="absolute top-1 right-1 w-2 h-2 bg-primary rounded-full"></span>
-              )}
-            </button>
-
             {/* New Transaction Button */}
             {location.pathname !== '/transactions' && (
               <button
@@ -102,12 +88,6 @@ export function DashboardLayout() {
         <div className="flex-1 overflow-y-auto p-6">
           <Outlet />
         </div>
-
-        {/* Notification Center */}
-        <NotificationCenter
-          isOpen={isNotificationCenterOpen}
-          onClose={() => setIsNotificationCenterOpen(false)}
-        />
       </main>
     </div>
   )

@@ -10,6 +10,7 @@ export default function Budgets() {
   const { data, init, addBudget, deleteBudget, updateBudget } = useAppStore();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [predictiveData, setPredictiveData] = useState<Array<{ category: string; projectedTotal: number; willExceed: boolean; daysRemaining: number }>>([]);
   const [newBudget, setNewBudget] = useState({
     category: '',
     limit: '',
@@ -24,6 +25,40 @@ export default function Budgets() {
       init(user.id);
     }
   }, [user, init]);
+
+  // Calculate predictive alerts
+  useEffect(() => {
+    if (data.transactions.length > 0 && data.budgets.length > 0) {
+      // Calculate projected spending
+      const now = new Date();
+      const currentMonthTransactions = data.transactions.filter(tx => {
+        const txDate = new Date(tx.date);
+        return txDate.getMonth() === now.getMonth() && txDate.getFullYear() === now.getFullYear();
+      });
+      
+      const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+      const daysRemaining = daysInMonth - now.getDate();
+      const daysPassed = now.getDate();
+      
+      const predictions = data.budgets.map(budget => {
+        const currentSpent = currentMonthTransactions
+          .filter(tx => tx.type === 'expense' && tx.category === budget.category)
+          .reduce((sum, tx) => sum + tx.amount, 0);
+        
+        const dailyAverage = daysPassed > 0 ? currentSpent / daysPassed : 0;
+        const projectedTotal = currentSpent + (dailyAverage * daysRemaining);
+        
+        return {
+          category: budget.category,
+          projectedTotal,
+          willExceed: projectedTotal > budget.limit,
+          daysRemaining,
+        };
+      });
+      
+      setPredictiveData(predictions);
+    }
+  }, [data.transactions, data.budgets, init]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -110,6 +145,39 @@ export default function Budgets() {
       <div className="bg-card p-6 rounded-lg border border-border">
         <BudgetSummary budgets={data.budgets} transactions={data.transactions} />
       </div>
+
+      {/* Predictive Alerts Section */}
+      {predictiveData.some(p => p.willExceed) && (
+        <div className="bg-amber-500/10 border border-amber-500/30 p-4 rounded-lg">
+          <div className="flex items-center gap-2 mb-3">
+            <svg className="w-5 h-5 text-amber-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+            </svg>
+            <h3 className="font-semibold text-amber-500">Previsão de Estouro</h3>
+          </div>
+          <p className="text-sm text-muted-foreground mb-3">
+            Com base nos seus gastos atuais, estas categorias devem ultrapassar o orçamento:
+          </p>
+          <div className="space-y-2">
+            {predictiveData
+              .filter(p => p.willExceed)
+              .map(prediction => {
+                const budget = data.budgets.find(b => b.category === prediction.category);
+                return (
+                  <div key={prediction.category} className="flex items-center justify-between p-2 bg-card/50 rounded">
+                    <span className="text-sm font-medium">{prediction.category}</span>
+                    <span className="text-sm text-red-400">
+                      Projeção: {formatCurrency(prediction.projectedTotal)}
+                      <span className="text-muted-foreground ml-2">
+                        (limite: {formatCurrency(budget?.limit || 0)})
+                      </span>
+                    </span>
+                  </div>
+                );
+              })}
+          </div>
+        </div>
+      )}
 
       {/* Budget List */}
       <div className="bg-card p-6 rounded-lg border border-border">

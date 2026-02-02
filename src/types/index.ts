@@ -70,13 +70,127 @@ export interface Goal {
 
 export type NotificationType = 'info' | 'success' | 'warning' | 'error';
 
+/**
+ * Categorias de notificação
+ */
+export type NotificationCategory = 'financeira' | 'lembrete' | 'relatorio' | 'sistema' | 'insight';
+
+/**
+ * Tipos de insight financeiro
+ */
+export type InsightType = 
+  | 'spending_pattern'    // Padrão de gastos
+  | 'budget_warning'      // Alerta de orçamento
+  | 'saving_opportunity'  // Oportunidade de economia
+  | 'income_analysis'     // Análise de receitas
+  | 'trend_alert'         // Alerta de tendência
+  | 'anomaly_detected'    // Anomalia detectada
+  | 'goal_progress'       // Progresso de meta
+  | 'monthly_summary';    // Resumo mensal
+
+/**
+ * Insight financeiro personalizado
+ */
+export interface FinancialInsight {
+  id: number;
+  type: InsightType;
+  title: string;
+  message: string;
+  severity: 'info' | 'warning' | 'success' | 'action';
+  category: string;
+  actionable: boolean;
+  actionLabel?: string;
+  actionUrl?: string;
+  data?: Record<string, any>;
+  createdAt: string;
+}
+
+/**
+ * Resumo financeiro (diário/semanal/mensal)
+ */
+export interface FinancialSummary {
+  period: 'daily' | 'weekly' | 'monthly';
+  startDate: string;
+  endDate: string;
+  totalIncome: number;
+  totalExpense: number;
+  balance: number;
+  topCategories: Array<{ category: string; amount: number; percentage: number }>;
+  transactionsCount: number;
+  budgetStatus: Array<{ category: string; spent: number; limit: number; percentage: number }>;
+  highlights: string[];
+  recommendations: string[];
+}
+
+/**
+ * Dados para análise preditiva
+ */
+export interface PredictiveData {
+  category: string;
+  currentSpent: number;
+  dailyAverage: number;
+  projectedTotal: number;
+  daysRemaining: number;
+  willExceed: boolean;
+  exceedAmount?: number;
+  daysUntilExceed?: number;
+}
+
+/**
+ * Configuração de preferências do usuário para notificações
+ */
+
+/**
+ * Configurações de preferências do usuário para notificações
+ */
+export interface NotificationPreferences {
+  /** Categorias ativadas para receber notificações */
+  enabledCategories: NotificationCategory[];
+  
+  /** Horário de início do silêncio (ex: "22:00") */
+  quietHoursStart: string;
+  
+  /** Horário de fim do silêncio (ex: "08:00") */
+  quietHoursEnd: string;
+  
+  /** Se o som está ativado */
+  soundEnabled: boolean;
+  
+  /** Se as notificações toast estão ativadas */
+  toastEnabled: boolean;
+  
+  /** Se deve mostrar prévia da mensagem */
+  showPreview: boolean;
+}
+
+/**
+ * Configuração padrão de preferências
+ */
+export const DEFAULT_NOTIFICATION_PREFERENCES: NotificationPreferences = {
+  enabledCategories: ['financeira', 'lembrete', 'relatorio', 'sistema', 'insight'],
+  quietHoursStart: '22:00',
+  quietHoursEnd: '08:00',
+  soundEnabled: true,
+  toastEnabled: true,
+  showPreview: true,
+};
+
+export type NotificationPriority = 'high' | 'normal' | 'low';
+
+/**
+ * Notificação do sistema
+ */
 export interface Notification {
   id: number;
   title: string;
   message: string;
   type: NotificationType;
+  category: NotificationCategory;
+  priority?: NotificationPriority;
   date: string;
   read: boolean;
+  archived?: boolean;
+  snoozedUntil?: string;
   profileId: string;
 }
 
@@ -111,3 +225,8 @@ export const AVAILABLE_COLORS = [
 ];
 
 export const DEFAULT_CATEGORIES = ['Alimentação', 'Moradia', 'Transporte', 'Lazer', 'Saúde', 'Salário', 'Investimentos', 'Educação', 'Viagem', 'Outros'];
+
+/**
+ * Período para resumos
+ */
+export type SummaryPeriod = 'daily' | 'weekly' | 'monthly';

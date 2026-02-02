@@ -107,13 +107,25 @@ function ImageCropModal({
       ctx.closePath();
       ctx.clip();
 
+      // Calcular dimensões para manter proporção
+      const imgAspect = img.width / img.height;
+      const canvasAspect = size / size;
+      let drawWidth = size;
+      let drawHeight = size;
+      
+      if (imgAspect > canvasAspect) {
+        drawHeight = size / imgAspect;
+      } else {
+        drawWidth = size * imgAspect;
+      }
+
       ctx.translate(size / 2, size / 2);
       ctx.rotate((rotation * Math.PI) / 180);
+      ctx.translate(position.x, position.y);
       ctx.scale(zoom, zoom);
-      ctx.translate(-size / 2, -size / 2);
-      ctx.translate(position.x / zoom, position.y / zoom);
+      ctx.translate(-drawWidth / 2, -drawHeight / 2);
 
-      ctx.drawImage(img, 0, 0, size, size);
+      ctx.drawImage(img, 0, 0, drawWidth, drawHeight);
       ctx.restore();
     }
 
@@ -434,9 +446,9 @@ export function FirstAccessScreen({ onBack, onSuccess }: FirstAccessScreenProps)
         <div className="absolute inset-0 bg-gradient-to-t from-neutral-950/60 via-transparent to-neutral-950/30" />
         
         <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6 }}
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 0.4, ease: 'easeOut' }}
           className="relative z-10 space-y-4 xl:space-y-6 text-center"
         >
           <div className="space-y-2">
@@ -449,12 +461,12 @@ export function FirstAccessScreen({ onBack, onSuccess }: FirstAccessScreenProps)
             </p>
           </div>
           <div className="flex flex-wrap gap-2 xl:gap-3 justify-center">
-            {['Controle Total', 'Metas Claras', 'Análise Smart', 'Segurança'].map((feature, i) => (
+            {['Controle Total', 'Metas Claras', 'Análise Smart', 'Segurança'].map((feature) => (
               <motion.div
                 key={feature}
-                initial={{ opacity: 0, x: -20 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: 0.3 + i * 0.1 }}
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.3, ease: 'easeOut' }}
                 className="flex items-center gap-2 px-3 py-1.5 xl:px-4 xl:py-2 bg-neutral-800/50 backdrop-blur-sm rounded-full border border-neutral-700/50"
               >
                 <Check className="w-3.5 h-3.5 xl:w-4 xl:h-4 text-primary" />
@@ -467,7 +479,7 @@ export function FirstAccessScreen({ onBack, onSuccess }: FirstAccessScreenProps)
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
-          transition={{ delay: 0.6 }}
+          transition={{ duration: 0.4, ease: 'easeOut', delay: 0.1 }}
           className="relative z-10 text-xs xl:text-sm text-neutral-400 mt-6"
         >
            Sua educação financeira em primeiro lugar.
@@ -486,39 +498,29 @@ export function FirstAccessScreen({ onBack, onSuccess }: FirstAccessScreenProps)
         <div className="absolute inset-0 bg-gradient-to-l from-neutral-800/20 via-transparent to-neutral-900/10" />
         
         <div className="relative z-10 flex-1 flex flex-col items-center justify-center p-4 sm:p-5 lg:p-6 w-full max-w-lg overflow-hidden">
-        <motion.div
-          initial={{ opacity: 0, x: 20 }}
-          animate={{ opacity: 1, x: 0 }}
-          className="w-full flex flex-col items-center"
-        >
-          <motion.button
-            initial={{ opacity: 0, x: -20 }}
-            animate={{ opacity: 1, x: 0 }}
-            onClick={onBack}
-            className="flex items-center gap-2 text-base text-neutral-400 hover:text-white mb-4 transition-colors group self-start"
+          <div
+            className="w-full flex flex-col items-center"
           >
-            <ArrowLeft className="w-5 h-5 group-hover:-translate-x-1 transition-transform" />
-            Voltar
-          </motion.button>
+            <button
+              onClick={onBack}
+              className="flex items-center gap-2 text-base text-neutral-400 hover:text-white mb-4 transition-colors group self-start"
+            >
+              <ArrowLeft className="w-5 h-5 group-hover:-translate-x-1 transition-transform" />
+              Voltar
+            </button>
 
-          <motion.div
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="mb-4"
-          >
-            <h1 className="text-2xl font-bold text-white mb-1">Crie sua conta</h1>
-            <p className="text-neutral-400 text-base">Preencha os dados abaixo para começar</p>
-          </motion.div>
+            <div
+              className="mb-4"
+            >
+              <h1 className="text-2xl font-bold text-white mb-1">Crie sua conta</h1>
+              <p className="text-neutral-400 text-base">Preencha os dados abaixo para começar</p>
+            </div>
 
-          <motion.div
-            initial={{ opacity: 0, scale: 0.98 }}
-            animate={{ opacity: 1, scale: 1 }}
-            className="bg-neutral-900/50 backdrop-blur-sm rounded-2xl border border-neutral-800/50 p-5 space-y-4 overflow-hidden w-full"
-          >
+            <div
+              className="bg-neutral-900/50 backdrop-blur-sm rounded-2xl border border-neutral-800/50 p-5 space-y-4 overflow-hidden w-full"
+            >
             <div className="flex items-center justify-center gap-4">
-              <motion.div
-                initial={{ scale: 0 }}
-                animate={{ scale: 1 }}
+              <div
                 className="relative"
               >
                 <div className="w-20 h-20 rounded-full bg-gradient-to-br from-primary/20 to-primary/10 border-2 border-primary/30 overflow-hidden flex items-center justify-center">
@@ -574,7 +576,7 @@ export function FirstAccessScreen({ onBack, onSuccess }: FirstAccessScreenProps)
                   onChange={handleFileSelect}
                   className="hidden"
                 />
-              </motion.div>
+              </div>
 
               <div className="flex-1">
                 <h3 className="text-white font-medium text-base mb-1">Foto de perfil</h3>
@@ -727,17 +729,14 @@ export function FirstAccessScreen({ onBack, onSuccess }: FirstAccessScreenProps)
                 </button>
               </div>
             </form>
-          </motion.div>
+          </div>
 
-          <motion.p
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 0.4 }}
+          <p
             className="text-center text-sm text-neutral-500 mt-4"
           >
             Ao criar sua conta, você concorda com nossos termos de uso
-          </motion.p>
-        </motion.div>
+          </p>
+        </div>
       </div>
 
       <AnimatePresence>

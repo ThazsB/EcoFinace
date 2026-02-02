@@ -10,6 +10,8 @@ export default function Transactions() {
   const [filterType, setFilterType] = useState<'all' | 'income' | 'expense'>('all');
   const [searchTerm, setSearchTerm] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [spendingPatterns, setSpendingPatterns] = useState<Array<{ category: string; average: number; trend: 'up' | 'down' | 'stable' }>>([]);
+  const [showPatterns, setShowPatterns] = useState(false);
   const [newTransaction, setNewTransaction] = useState({
     desc: '',
     amount: '',
@@ -23,6 +25,57 @@ export default function Transactions() {
       init(user.id);
     }
   }, [user, init]);
+
+  // Analyze spending patterns when transactions change
+  useEffect(() => {
+    if (data.transactions.length > 0) {
+      const patterns = analyzeSpendingPatterns(data.transactions);
+      setSpendingPatterns(patterns);
+    }
+  }, [data.transactions]);
+
+  const analyzeSpendingPatterns = (transactions: any[]) => {
+    const now = new Date();
+    const threeMonthsAgo = new Date(now.getFullYear(), now.getMonth() - 3, now.getDate());
+    
+    const recentTransactions = transactions.filter(tx => 
+      new Date(tx.date) >= threeMonthsAgo && tx.type === 'expense'
+    );
+    
+    const categoryTotals: Record<string, { total: number; count: number }> = {};
+    
+    recentTransactions.forEach(tx => {
+      if (!categoryTotals[tx.category]) {
+        categoryTotals[tx.category] = { total: 0, count: 0 };
+      }
+      categoryTotals[tx.category].total += tx.amount;
+      categoryTotals[tx.category].count += 1;
+    });
+    
+    const currentMonthTransactions = transactions.filter(tx => {
+      const txDate = new Date(tx.date);
+      return txDate.getMonth() === now.getMonth() && txDate.getFullYear() === now.getFullYear();
+    });
+    
+    const currentMonthTotals: Record<string, number> = {};
+    currentMonthTransactions.filter(tx => tx.type === 'expense').forEach(tx => {
+      currentMonthTotals[tx.category] = (currentMonthTotals[tx.category] || 0) + tx.amount;
+    });
+    
+    return Object.entries(categoryTotals).map(([category, data]) => {
+      const average = data.total / 3;
+      const currentMonth = currentMonthTotals[category] || 0;
+      let trend: 'up' | 'down' | 'stable' = 'stable';
+      
+      if (currentMonth > average * 1.1) {
+        trend = 'up';
+      } else if (currentMonth < average * 0.9) {
+        trend = 'down';
+      }
+      
+      return { category, average, trend };
+    });
+  };
 
   const filteredTransactions = data.transactions.filter(tx => {
     const matchesType = filterType === 'all' || tx.type === filterType;
@@ -115,8 +168,50 @@ export default function Transactions() {
             <option value="income">Receitas</option>
             <option value="expense">Despesas</option>
           </select>
+          
+          <button
+            onClick={() => setShowPatterns(!showPatterns)}
+            className={`px-4 py-2 rounded-lg transition-colors ${showPatterns ? 'bg-primary text-primary-foreground' : 'bg-muted hover:bg-muted/80'}`}
+          >
+            Análise
+          </button>
         </div>
       </div>
+
+      {/* Spending Patterns Panel */}
+      {showPatterns && spendingPatterns.length > 0 && (
+        <div className="bg-card p-4 rounded-lg border border-border">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="font-semibold">Padrões de Gastos (Últimos 3 meses)</h3>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+            {spendingPatterns.slice(0, 6).map(pattern => (
+              <div 
+                key={pattern.category}
+                className={`p-3 rounded-lg border ${
+                  pattern.trend === 'up' ? 'bg-red-500/10 border-red-500/30' : 
+                  pattern.trend === 'down' ? 'bg-green-500/10 border-green-500/30' : 
+                  'bg-muted/50 border-border'
+                }`}
+              >
+                <div className="flex items-center justify-between mb-1">
+                  <span className="text-sm font-medium">{pattern.category}</span>
+                  <span className={`text-xs px-2 py-0.5 rounded-full ${
+                    pattern.trend === 'up' ? 'bg-red-500/20 text-red-400' :
+                    pattern.trend === 'down' ? 'bg-green-500/20 text-green-400' :
+                    'bg-gray-500/20 text-gray-400'
+                  }`}>
+                    {pattern.trend === 'up' ? '↑ Crescendo' : pattern.trend === 'down' ? '↓ Diminuindo' : '→ Estável'}
+                  </span>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Média: R${pattern.average.toFixed(2)}
+                </p>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Transaction List */}
       <TransactionList
