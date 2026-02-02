@@ -51,6 +51,10 @@ interface NotificationsState {
   openCenter: () => void;
   closeCenter: () => void;
   setPermissionRequested: (requested: boolean) => void;
+  
+  // Toast Actions
+  triggerToast: (notification: NotificationPayload) => void;
+  processQueuedNotifications: () => void;
 }
 
 export const useNotificationsStore = create<NotificationsState>()(
@@ -271,19 +275,19 @@ export const useNotificationsStore = create<NotificationsState>()(
           return; // Ainda em horário de silêncio
         }
         
-        const processed = [];
+        const processed: NotificationPayload[] = [];
         for (const item of queued) {
           addNotification(item);
           processed.push(item);
         }
         
         // Remover processados da fila
-        const remaining = queued.filter(item => !processed.includes(item));
+        const remaining = queued.filter((item: NotificationPayload) => !processed.includes(item));
         localStorage.setItem('notification_queue', JSON.stringify(remaining));
       },
       
       // Helper para trigger de toast
-      triggerToast: (notification) => {
+      triggerToast: (notification: NotificationPayload) => {
         if (typeof window !== 'undefined') {
           const event = new CustomEvent('app-toast', {
             detail: {

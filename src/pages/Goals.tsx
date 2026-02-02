@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useAuthStore } from '@/stores/authStore';
 import { useAppStore } from '@/stores/appStore';
 import { formatCurrency } from '@/utils/currency';
+import { Goal } from '@/types';
 
 export default function Goals() {
   const { user } = useAuthStore();
@@ -102,7 +103,7 @@ export default function Goals() {
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {data.goals.map((goal) => {
+          {data.goals.map((goal: Goal) => {
             const percentage = Math.min((goal.current / goal.target) * 100, 100);
             let color = 'bg-green-500';
 

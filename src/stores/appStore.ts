@@ -80,7 +80,7 @@ export const useAppStore = create<AppState>((set, get) => ({
     set(state => ({
       data: {
         ...state.data,
-        transactions: state.data.transactions.filter(tx => tx.id !== id)
+        transactions: state.data.transactions.filter((tx: Transaction) => tx.id !== id)
       }
     }));
 
@@ -117,7 +117,7 @@ export const useAppStore = create<AppState>((set, get) => ({
 
   updateGoal: async (id, updatedGoal) => {
     set(state => {
-      const goals = state.data.goals.map(goal =>
+      const goals = state.data.goals.map((goal: Goal) =>
         goal.id === id ? { ...goal, ...updatedGoal } : goal
       );
       return {
@@ -137,7 +137,7 @@ export const useAppStore = create<AppState>((set, get) => ({
       localStorage.setItem(`ecofinance_${profileId}_goals`, JSON.stringify(updatedGoals));
     }
 
-    const updated = get().data.goals.find(goal => goal.id === id);
+    const updated = get().data.goals.find((goal: Goal) => goal.id === id);
     return updated || null;
   },
 
@@ -145,7 +145,7 @@ export const useAppStore = create<AppState>((set, get) => ({
     set(state => ({
       data: {
         ...state.data,
-        goals: state.data.goals.filter(goal => goal.id !== id)
+        goals: state.data.goals.filter((goal: Goal) => goal.id !== id)
       }
     }));
 
@@ -157,7 +157,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   },
 
   addGoalValue: async (id, amount) => {
-    const goal = get().data.goals.find(goal => goal.id === id);
+    const goal = get().data.goals.find((goal: Goal) => goal.id === id);
     if (!goal) return null;
 
     const updatedGoal = { ...goal, current: goal.current + amount };
@@ -187,15 +187,15 @@ export const useAppStore = create<AppState>((set, get) => ({
 
   updateBudget: async (oldCategory, newBudget) => {
     set(state => {
-      const budgets = state.data.budgets.map(budget =>
+      const budgets = state.data.budgets.map((budget: Budget) =>
         budget.category === oldCategory ? newBudget : budget
       );
 
-      const transactions = state.data.transactions.map(tx =>
+      const transactions = state.data.transactions.map((tx: Transaction) =>
         tx.category === oldCategory ? { ...tx, category: newBudget.category } : tx
       );
 
-      const categories = state.data.categories.map(cat =>
+      const categories = state.data.categories.map((cat: string) =>
         cat === oldCategory ? newBudget.category : cat
       );
 
@@ -239,11 +239,11 @@ export const useAppStore = create<AppState>((set, get) => ({
 
   deleteBudget: async (category) => {
     set(state => {
-      const budgets = state.data.budgets.filter(budget => budget.category !== category);
-      const transactions = state.data.transactions.map(tx =>
+      const budgets = state.data.budgets.filter((budget: Budget) => budget.category !== category);
+      const transactions = state.data.transactions.map((tx: Transaction) =>
         tx.category === category ? { ...tx, category: 'Outros' } : tx
       );
-      const categories = state.data.categories.filter(cat => cat !== category);
+      const categories = state.data.categories.filter((cat: string) => cat !== category);
 
       return {
         data: {
@@ -306,11 +306,11 @@ export const useAppStore = create<AppState>((set, get) => ({
     }
 
     set(state => {
-      const categories = state.data.categories.filter(cat => cat !== categoryName);
-      const transactions = state.data.transactions.map(tx =>
+      const categories = state.data.categories.filter((cat: string) => cat !== categoryName);
+      const transactions = state.data.transactions.map((tx: Transaction) =>
         tx.category === categoryName ? { ...tx, category: 'Outros' } : tx
       );
-      const budgets = state.data.budgets.filter(budget => budget.category !== categoryName);
+      const budgets = state.data.budgets.filter((budget: Budget) => budget.category !== categoryName);
 
       return {
         data: {
@@ -354,15 +354,15 @@ export const useAppStore = create<AppState>((set, get) => ({
     }
 
     set(state => {
-      const categories = state.data.categories.map(cat =>
+      const categories = state.data.categories.map((cat: string) =>
         cat === oldName ? trimmedName : cat
       );
 
-      const transactions = state.data.transactions.map(tx =>
+      const transactions = state.data.transactions.map((tx: Transaction) =>
         tx.category === oldName ? { ...tx, category: trimmedName } : tx
       );
 
-      const budgets = state.data.budgets.map(budget =>
+      const budgets = state.data.budgets.map((budget: Budget) =>
         budget.category === oldName ? { ...budget, category: trimmedName } : budget
       );
 

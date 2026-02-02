@@ -3,7 +3,7 @@ import { useAuthStore } from '@/stores/authStore';
 import { useAppStore } from '@/stores/appStore';
 import { BudgetSummary } from '@/components/BudgetSummary';
 import { formatCurrency } from '@/utils/currency';
-import { DEFAULT_CATEGORIES } from '@/types';
+import { DEFAULT_CATEGORIES, Transaction, Budget } from '@/types';
 
 export default function Budgets() {
   const { user } = useAuthStore();
@@ -31,7 +31,7 @@ export default function Budgets() {
     if (data.transactions.length > 0 && data.budgets.length > 0) {
       // Calculate projected spending
       const now = new Date();
-      const currentMonthTransactions = data.transactions.filter(tx => {
+      const currentMonthTransactions = data.transactions.filter((tx: Transaction) => {
         const txDate = new Date(tx.date);
         return txDate.getMonth() === now.getMonth() && txDate.getFullYear() === now.getFullYear();
       });
@@ -40,10 +40,10 @@ export default function Budgets() {
       const daysRemaining = daysInMonth - now.getDate();
       const daysPassed = now.getDate();
       
-      const predictions = data.budgets.map(budget => {
+      const predictions = data.budgets.map((budget: Budget) => {
         const currentSpent = currentMonthTransactions
-          .filter(tx => tx.type === 'expense' && tx.category === budget.category)
-          .reduce((sum, tx) => sum + tx.amount, 0);
+          .filter((tx: Transaction) => tx.type === 'expense' && tx.category === budget.category)
+          .reduce((sum: number, tx: Transaction) => sum + tx.amount, 0);
         
         const dailyAverage = daysPassed > 0 ? currentSpent / daysPassed : 0;
         const projectedTotal = currentSpent + (dailyAverage * daysRemaining);
@@ -75,7 +75,7 @@ export default function Budgets() {
     }
 
     // Check if budget for this category already exists
-    const existingBudget = data.budgets.find(b => b.category === newBudget.category);
+    const existingBudget = data.budgets.find((b: Budget) => b.category === newBudget.category);
     if (existingBudget) {
       alert('Já existe um orçamento para essa categoria');
       return;
@@ -162,7 +162,7 @@ export default function Budgets() {
             {predictiveData
               .filter(p => p.willExceed)
               .map(prediction => {
-                const budget = data.budgets.find(b => b.category === prediction.category);
+                const budget = data.budgets.find((b: Budget) => b.category === prediction.category);
                 return (
                   <div key={prediction.category} className="flex items-center justify-between p-2 bg-card/50 rounded">
                     <span className="text-sm font-medium">{prediction.category}</span>
@@ -190,7 +190,7 @@ export default function Budgets() {
           </div>
         ) : (
           <div className="space-y-4">
-            {data.budgets.map((budget) => (
+            {data.budgets.map((budget: Budget) => (
               <div
                 key={budget.category}
                 className="flex items-center justify-between p-4 rounded-lg border border-border"
@@ -263,12 +263,12 @@ export default function Budgets() {
                   className="w-full px-4 py-2 bg-muted rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
                 >
                   <option value="">Selecione...</option>
-                  {DEFAULT_CATEGORIES.map((category) => (
+                  {DEFAULT_CATEGORIES.map((category: string) => (
                     <option key={category} value={category}>
                       {category}
                     </option>
                   ))}
-                  {data.categories.map((category) => (
+                  {data.categories.map((category: string) => (
                     <option key={category} value={category}>
                       {category}
                     </option>

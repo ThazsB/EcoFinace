@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useAuthStore } from '@/stores/authStore';
 import { useAppStore } from '@/stores/appStore';
 import { TransactionList } from '@/components/TransactionList';
-import { DEFAULT_CATEGORIES } from '@/types';
+import { DEFAULT_CATEGORIES, Transaction } from '@/types';
 
 export default function Transactions() {
   const { user } = useAuthStore();
@@ -77,7 +77,7 @@ export default function Transactions() {
     });
   };
 
-  const filteredTransactions = data.transactions.filter(tx => {
+  const filteredTransactions = data.transactions.filter((tx: Transaction) => {
     const matchesType = filterType === 'all' || tx.type === filterType;
     const matchesSearch = 
       tx.desc.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -272,12 +272,12 @@ export default function Transactions() {
                   className="w-full px-4 py-2 bg-muted rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
                 >
                   <option value="">Selecione...</option>
-                  {DEFAULT_CATEGORIES.map((category) => (
+                  {DEFAULT_CATEGORIES.map((category: string) => (
                     <option key={category} value={category}>
                       {category}
                     </option>
                   ))}
-                  {data.categories.map((category) => (
+                  {data.categories.map((category: string) => (
                     <option key={category} value={category}>
                       {category}
                     </option>

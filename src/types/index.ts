@@ -167,3 +167,30 @@ export const DEFAULT_CATEGORIES = ['Alimentação', 'Moradia', 'Transporte', 'La
  * Período para resumos
  */
 export type SummaryPeriod = 'daily' | 'weekly' | 'monthly';
+
+/**
+ * Tipo legacy de notificação (usado em supabase.ts)
+ */
+export interface Notification {
+  id: number;
+  title: string;
+  message: string;
+  type: string;
+  category: string;
+  priority: string;
+  date: string;
+  read: boolean;
+  archived: boolean;
+  snoozedUntil?: string | null;
+  profileId: string;
+}
+
+/**
+ * Dados da aplicação para o store
+ */
+export interface AppData {
+  transactions: Transaction[];
+  budgets: Budget[];
+  goals: Goal[];
+  categories: string[];
+}

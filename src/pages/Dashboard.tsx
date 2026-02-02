@@ -5,6 +5,7 @@ import { formatCurrency } from '@/utils/currency'
 import { PieChart, LineChart } from '../components/charts'
 import { TransactionList } from '../components/TransactionList'
 import { BudgetSummary } from '../components/BudgetSummary'
+import { Transaction } from '@/types'
 
 export default function Dashboard() {
   const { user } = useAuthStore()
@@ -26,28 +27,28 @@ export default function Dashboard() {
   }
 
   // Calculate stats
-  const totalBalance = data.transactions.reduce((sum, tx) => 
+  const totalBalance = data.transactions.reduce((sum: number, tx: Transaction) => 
     tx.type === 'income' ? sum + tx.amount : sum - tx.amount, 0
   )
 
-  const monthlyTransactions = data.transactions.filter(tx => {
+  const monthlyTransactions = data.transactions.filter((tx: Transaction) => {
     const txDate = new Date(tx.date)
     const now = new Date()
     return txDate.getMonth() === now.getMonth() && txDate.getFullYear() === now.getFullYear()
   })
 
   const monthlyIncome = monthlyTransactions
-    .filter(tx => tx.type === 'income')
-    .reduce((sum, tx) => sum + tx.amount, 0)
+    .filter((tx: Transaction) => tx.type === 'income')
+    .reduce((sum: number, tx: Transaction) => sum + tx.amount, 0)
 
   const monthlyExpense = monthlyTransactions
-    .filter(tx => tx.type === 'expense')
-    .reduce((sum, tx) => sum + tx.amount, 0)
+    .filter((tx: Transaction) => tx.type === 'expense')
+    .reduce((sum: number, tx: Transaction) => sum + tx.amount, 0)
 
   // Prepare data for charts
   const pieChartData = monthlyTransactions
-    .filter(tx => tx.type === 'expense')
-    .reduce((acc, tx) => {
+    .filter((tx: Transaction) => tx.type === 'expense')
+    .reduce((acc: Record<string, number>, tx: Transaction) => {
       acc[tx.category] = (acc[tx.category] || 0) + tx.amount
       return acc
     }, {} as Record<string, number>)
@@ -55,12 +56,12 @@ export default function Dashboard() {
   const lineChartData = Array.from({ length: 6 }, (_, i) => {
     const date = new Date()
     date.setMonth(date.getMonth() - i)
-    const monthTransactions = data.transactions.filter(tx => {
+    const monthTransactions = data.transactions.filter((tx: Transaction) => {
       const txDate = new Date(tx.date)
       return txDate.getMonth() === date.getMonth() && txDate.getFullYear() === date.getFullYear()
     })
-    const income = monthTransactions.filter(tx => tx.type === 'income').reduce((sum, tx) => sum + tx.amount, 0)
-    const expense = monthTransactions.filter(tx => tx.type === 'expense').reduce((sum, tx) => sum + tx.amount, 0)
+    const income = monthTransactions.filter((tx: Transaction) => tx.type === 'income').reduce((sum: number, tx: Transaction) => sum + tx.amount, 0)
+    const expense = monthTransactions.filter((tx: Transaction) => tx.type === 'expense').reduce((sum: number, tx: Transaction) => sum + tx.amount, 0)
     return {
       month: date.toLocaleString('pt-BR', { month: 'short' }),
       income,

@@ -3,6 +3,7 @@ import { useAuthStore } from '@/stores/authStore';
 import { useAppStore } from '@/stores/appStore';
 import { PieChart, LineChart } from '@/components/charts';
 import { formatCurrency } from '@/utils/currency';
+import { Transaction } from '@/types';
 
 export default function Reports() {
   const { user } = useAuthStore();
@@ -17,7 +18,7 @@ export default function Reports() {
   }, [user, init]);
 
   // Filter transactions by selected year and month
-  const filteredTransactions = data.transactions.filter(tx => {
+  const filteredTransactions = data.transactions.filter((tx: Transaction) => {
     const txDate = new Date(tx.date);
     const matchesYear = txDate.getFullYear() === currentYear;
     const matchesMonth = selectedMonth !== null ? txDate.getMonth() === selectedMonth : true;
@@ -26,36 +27,36 @@ export default function Reports() {
 
   // Calculate stats
   const totalIncome = filteredTransactions
-    .filter(tx => tx.type === 'income')
-    .reduce((sum, tx) => sum + tx.amount, 0);
+    .filter((tx: Transaction) => tx.type === 'income')
+    .reduce((sum: number, tx: Transaction) => sum + tx.amount, 0);
 
   const totalExpense = filteredTransactions
-    .filter(tx => tx.type === 'expense')
-    .reduce((sum, tx) => sum + tx.amount, 0);
+    .filter((tx: Transaction) => tx.type === 'expense')
+    .reduce((sum: number, tx: Transaction) => sum + tx.amount, 0);
 
   const netIncome = totalIncome - totalExpense;
 
   // Prepare data for charts
   const expenseByCategory = filteredTransactions
-    .filter(tx => tx.type === 'expense')
-    .reduce((acc, tx) => {
+    .filter((tx: Transaction) => tx.type === 'expense')
+    .reduce((acc: Record<string, number>, tx: Transaction) => {
       acc[tx.category] = (acc[tx.category] || 0) + tx.amount;
       return acc;
     }, {} as Record<string, number>);
 
   const monthlyData = Array.from({ length: 12 }, (_, i) => {
-    const monthTransactions = data.transactions.filter(tx => {
+    const monthTransactions = data.transactions.filter((tx: Transaction) => {
       const txDate = new Date(tx.date);
       return txDate.getFullYear() === currentYear && txDate.getMonth() === i;
     });
 
     const income = monthTransactions
-      .filter(tx => tx.type === 'income')
-      .reduce((sum, tx) => sum + tx.amount, 0);
+      .filter((tx: Transaction) => tx.type === 'income')
+      .reduce((sum: number, tx: Transaction) => sum + tx.amount, 0);
 
     const expense = monthTransactions
-      .filter(tx => tx.type === 'expense')
-      .reduce((sum, tx) => sum + tx.amount, 0);
+      .filter((tx: Transaction) => tx.type === 'expense')
+      .reduce((sum: number, tx: Transaction) => sum + tx.amount, 0);
 
     return {
       month: new Date(currentYear, i).toLocaleString('pt-BR', { month: 'short' }),
@@ -156,7 +157,7 @@ export default function Reports() {
           </div>
         ) : (
           <div className="space-y-3">
-            {filteredTransactions.map((tx) => (
+            {filteredTransactions.map((tx: Transaction) => (
               <div
                 key={tx.id}
                 className={`flex items-center justify-between p-4 rounded-lg border transition-colors ${
