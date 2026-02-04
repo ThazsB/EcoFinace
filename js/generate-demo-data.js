@@ -1,5 +1,5 @@
 /**
- * Script de Demonstração - Gera dados de teste para o EcoFinance
+ * Script de Demonstração - Gera dados de teste para o Fins
  * 
  * Este script cria:
  * - Transações ao longo de 6 meses
@@ -7,7 +7,7 @@
  * - Orçamentos e metas
  * 
  * Como usar:
- * 1. Abra o console do navegador na página do EcoFinance
+ * 1. Abra o console do navegador na página do Fins
  * 2. Certifique-se de que há um perfil ativo logado
  * 3. Copie e cole este código no console
  * 4. Execute (pressione Enter)
@@ -16,7 +16,7 @@
 // Função principal para gerar dados de demonstração
 export function generateDemoData() {
     // Primeiro, precisa haver um perfil ativo
-    const activeProfileId = localStorage.getItem('ecofinance_active_profile');
+    const activeProfileId = localStorage.getItem('fins_active_profile');
 
     if (!activeProfileId) {
         console.error('Nenhum perfil ativo encontrado. Por favor, faça login em um perfil primeiro.');
@@ -25,10 +25,10 @@ export function generateDemoData() {
 
     console.log('Iniciando geração de dados de demonstração para o perfil:', activeProfileId);
 
-    const transactionsKey = `ecofinance_${activeProfileId}_transactions`;
-    const notificationsKey = `ecofinance_${activeProfileId}_notifications`;
-    const budgetsKey = `ecofinance_${activeProfileId}_budgets`;
-    const goalsKey = `ecofinance_${activeProfileId}_goals`;
+    const transactionsKey = `fins_${activeProfileId}_transactions`;
+    const notificationsKey = `fins_${activeProfileId}_notifications`;
+    const budgetsKey = `fins_${activeProfileId}_budgets`;
+    const goalsKey = `fins_${activeProfileId}_goals`;
 
     // Gerar transações dos últimos 6 meses
     const transactions = generateTransactions(6);

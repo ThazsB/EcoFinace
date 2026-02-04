@@ -1,5 +1,5 @@
 /**
- * Tipos para o sistema de notificações do EcoFinance
+ * Tipos para o sistema de notificações do Fins
  */
 
 // Tipos de prioridade para notificações
@@ -22,6 +22,12 @@ export type NotificationCategory =
   | 'system'          // Sistema
   | 'insight'         // Insights financeiros
   | 'achievement';    // Conquistas
+
+// Tipos de toast (para notificações in-app)
+export type ToastType = 'info' | 'success' | 'warning' | 'error';
+
+// Tipos de transação (para context toast)
+export type TransactionType = 'income' | 'expense';
 
 // Status da notificação
 export type NotificationStatus = 'pending' | 'sent' | 'delivered' | 'read' | 'dismissed';

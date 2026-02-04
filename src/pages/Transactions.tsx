@@ -1,12 +1,24 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useAuthStore } from '@/stores/authStore';
 import { useAppStore } from '@/stores/appStore';
+import { useNotificationEngine } from '@/engine/notification-engine';
 import { TransactionList } from '@/components/TransactionList';
-import { DEFAULT_CATEGORIES, Transaction } from '@/types';
+import { useTransactionToast } from '@/components/notifications';
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
+import { DEFAULT_CATEGORIES, Transaction, Budget } from '@/types';
+import { TrendingDown, TrendingUp } from 'lucide-react';
+
+interface BudgetStatus {
+  category: string;
+  spent: number;
+  limit: number;
+}
 
 export default function Transactions() {
   const { user } = useAuthStore();
   const { data, init, deleteTransaction, addTransaction } = useAppStore();
+  const { checkBudgetAlerts } = useNotificationEngine();
+  const { showTransactionSuccess, showTransactionError, showTransactionDelete } = useTransactionToast();
   const [filterType, setFilterType] = useState<'all' | 'income' | 'expense'>('all');
   const [searchTerm, setSearchTerm] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -19,6 +31,38 @@ export default function Transactions() {
     category: '',
     date: new Date().toISOString().split('T')[0],
   });
+
+  // Confirm dialog state
+  const [confirmDialog, setConfirmDialog] = useState<{
+    isOpen: boolean;
+    transaction: Transaction | null;
+    isDeleting: boolean;
+  }>({
+    isOpen: false,
+    transaction: null,
+    isDeleting: false,
+  });
+
+  // Calculate budget statuses for notifications
+  const getBudgetStatuses = useCallback((): BudgetStatus[] => {
+    const now = new Date();
+    const currentMonthTransactions = data.transactions.filter((tx: Transaction) => {
+      const txDate = new Date(tx.date);
+      return txDate.getMonth() === now.getMonth() && txDate.getFullYear() === now.getFullYear();
+    });
+
+    return data.budgets.map((budget: Budget) => {
+      const currentSpent = currentMonthTransactions
+        .filter((tx: Transaction) => tx.type === 'expense' && tx.category === budget.category)
+        .reduce((sum: number, tx: Transaction) => sum + tx.amount, 0);
+
+      return {
+        category: budget.category,
+        spent: currentSpent,
+        limit: budget.limit,
+      };
+    });
+  }, [data.transactions, data.budgets]);
 
   useEffect(() => {
     if (user) {
@@ -112,6 +156,19 @@ export default function Transactions() {
       ...newTransaction,
       desc: newTransaction.desc.trim(),
       amount,
+    }).then(() => {
+      // Mostrar toast de sucesso
+      showTransactionSuccess({ type: newTransaction.type, action: 'add', description: newTransaction.desc.trim(), amount });
+      
+      // Check budget alerts after adding transaction
+      if (newTransaction.type === 'expense' && data.budgets.length > 0) {
+        const budgetStatuses = getBudgetStatuses();
+        checkBudgetAlerts(budgetStatuses);
+      }
+    }).catch((error) => {
+      // Mostrar toast de erro com retry
+      showTransactionError({ type: newTransaction.type, description: newTransaction.desc.trim(), amount, error: 'BRL' });
+      console.error('Erro ao adicionar transação:', error);
     });
 
     setNewTransaction({
@@ -125,10 +182,71 @@ export default function Transactions() {
     setIsModalOpen(false);
   };
 
-  const handleDelete = (id: number) => {
-    if (confirm('Tem certeza que deseja excluir esta transação?')) {
-      deleteTransaction(id);
+  // Open confirm dialog for deletion
+  const handleDeleteRequest = (id: number) => {
+    const txToDelete = data.transactions.find((tx: Transaction) => tx.id === id);
+    if (txToDelete) {
+      setConfirmDialog({
+        isOpen: true,
+        transaction: txToDelete,
+        isDeleting: false,
+      });
     }
+  };
+
+  // Confirm deletion
+  const handleConfirmDelete = () => {
+    if (confirmDialog.transaction) {
+      setConfirmDialog(prev => ({ ...prev, isDeleting: true }));
+      
+      showTransactionDelete({ type: confirmDialog.transaction.type, description: confirmDialog.transaction.desc, amount: confirmDialog.transaction.amount });
+      deleteTransaction(confirmDialog.transaction.id);
+      
+      setConfirmDialog({
+        isOpen: false,
+        transaction: null,
+        isDeleting: false,
+      });
+    }
+  };
+
+  // Cancel deletion
+  const handleCancelDelete = () => {
+    setConfirmDialog({
+      isOpen: false,
+      transaction: null,
+      isDeleting: false,
+    });
+  };
+
+  // Format transaction details for dialog
+  const getTransactionDetails = (tx: Transaction) => {
+    const formattedAmount = new Intl.NumberFormat('pt-BR', {
+      style: 'currency',
+      currency: 'BRL',
+    }).format(tx.amount);
+    
+    return [
+      {
+        label: 'Descrição',
+        value: tx.desc,
+        icon: tx.type === 'expense' 
+          ? <TrendingDown className="w-4 h-4 text-red-500" />
+          : <TrendingUp className="w-4 h-4 text-green-500" />,
+      },
+      {
+        label: 'Valor',
+        value: formattedAmount,
+      },
+      {
+        label: 'Categoria',
+        value: tx.category,
+      },
+      {
+        label: 'Data',
+        value: new Date(tx.date).toLocaleDateString('pt-BR'),
+      },
+    ];
   };
 
   return (
@@ -216,7 +334,7 @@ export default function Transactions() {
       {/* Transaction List */}
       <TransactionList
         transactions={sortedTransactions}
-        onDelete={handleDelete}
+        onDelete={handleDeleteRequest}
         showActions={true}
       />
 
@@ -313,6 +431,22 @@ export default function Transactions() {
             </form>
           </div>
         </div>
+      )}
+
+      {/* Delete Confirmation Dialog */}
+      {confirmDialog.transaction && (
+        <ConfirmDialog
+          isOpen={confirmDialog.isOpen}
+          title="Excluir Transação"
+          message={`Tem certeza que deseja excluir esta ${confirmDialog.transaction.type === 'expense' ? 'despesa' : 'receita'}?`}
+          type="transaction"
+          details={getTransactionDetails(confirmDialog.transaction)}
+          confirmText="Excluir"
+          cancelText="Cancelar"
+          onConfirm={handleConfirmDelete}
+          onCancel={handleCancelDelete}
+          isDeleting={confirmDialog.isDeleting}
+        />
       )}
     </div>
   );

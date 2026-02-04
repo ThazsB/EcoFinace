@@ -1,8 +1,8 @@
-# Plano Técnico: Sistema de Notificações Robust para EcoFinance
+# Plano Técnico: Sistema de Notificações Robust para Fins
 
 ## Sumário Executivo
 
-Este documento apresenta um plano técnico abrangente para implementação de um sistema de notificações enterprise-grade no EcoFinance, inspirado nas melhores práde plataformas como Google Finance, Mint,YNAB e aplicativos bancários modernos. O sistema proposto oferece notificações em tempo real, personalização avançada, sincronização multi-dispositivo e inteligência contextual.
+Este documento apresenta um plano técnico abrangente para implementação de um sistema de notificações enterprise-grade no Fins, inspirado nas melhores práde plataformas como Google Finance, Mint,YNAB e aplicativos bancários modernos. O sistema proposto oferece notificações em tempo real, personalização avançada, sincronização multi-dispositivo e inteligência contextual.
 
 ---
 
@@ -1517,7 +1517,7 @@ self.addEventListener('push', (event) => {
   const data = event.data.json();
   
   const options = {
-    body: data.message || 'Nova notificação do EcoFinance',
+    body: data.message || 'Nova notificação do Fins',
     icon: data.icon || '/icons/notification-icon.png',
     badge: data.badge || '/icons/badge-icon.png',
     tag: data.tag || 'default',
@@ -2956,4 +2956,4 @@ describe('Notification System', () => {
 
 *Documento criado em: Fevereiro 2025*
 *Versão: 1.0*
-*Autor: Sistema de Notificações EcoFinance*
+*Autor: Sistema de Notificações Fins*

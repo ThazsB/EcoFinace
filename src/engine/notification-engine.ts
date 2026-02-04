@@ -1,5 +1,5 @@
 /**
- * Engine de Regras de Notificação do EcoFinance
+ * Engine de Regras de Notificação do Fins
  * Sistema de triggers e regras para notificações automáticas
  */
 
@@ -10,6 +10,7 @@ import type {
   RuleCondition,
   RuleAction,
 } from '@/types/notifications';
+import React, { useCallback } from 'react';
 import { useNotificationsStore } from '@/stores/notificationsStore';
 
 interface RuleContext {
@@ -52,10 +53,16 @@ interface UserProfile {
 export class NotificationEngine {
   private rules: NotificationRule[] = [];
   private context: RuleContext | null = null;
-  private store = useNotificationsStore.getState();
 
   constructor() {
     this.loadDefaultRules();
+  }
+
+  /**
+   * Obter store de notificações
+   */
+  private getStore() {
+    return useNotificationsStore.getState();
   }
 
   /**
@@ -129,7 +136,7 @@ export class NotificationEngine {
             priority: 'urgent',
           },
         ],
-        cooldownMinutes: 720,
+        cooldownMinutes: 0, // Sem cooldown para permitir múltiplas notificações
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
       },
@@ -247,6 +254,7 @@ export class NotificationEngine {
     }
 
     const notifications: NotificationPayload[] = [];
+    const store = this.getStore();
 
     for (const rule of this.rules) {
       if (!rule.enabled) continue;
@@ -275,7 +283,18 @@ export class NotificationEngine {
       }
     }
 
-    return notifications;
+    // Adicionar notificações ao store (removendo duplicatas primeiro)
+    const uniqueNotifications = notifications.filter((notification, index, self) => {
+      return index === self.findIndex(n => 
+        n.title === notification.title && 
+        n.message === notification.message &&
+        n.category === notification.category
+      );
+    });
+    
+    uniqueNotifications.forEach((n) => store.addNotification(n));
+
+    return uniqueNotifications;
   }
 
   /**
@@ -384,6 +403,16 @@ export class NotificationEngine {
   }
 
   /**
+   * Interpolação de strings
+   */
+  private interpolate(template: string, context: RuleContext): string {
+    return template.replace(/\{\{([^}]+)\}\}/g, (match, path) => {
+      const value = this.getNestedValue(context, path.trim());
+      return value !== undefined ? String(value) : match;
+    });
+  }
+
+  /**
    * Construir notificação
    */
   private buildNotification(
@@ -394,7 +423,46 @@ export class NotificationEngine {
 
     // Interpolação de variáveis
     const title = this.interpolate(notification.title || '', context);
-    const message = this.interpolate(notification.message || '', context);
+    
+    // Para mensagens de orçamento, expandir variáveis
+    let message = notification.message || '';
+    
+    // Verificar se budgets existe e é um array
+    let budgetsArray: BudgetStatus[] = [];
+    
+    if (context.budgets) {
+      if (typeof context.budgets === 'string') {
+        try {
+          budgetsArray = JSON.parse(context.budgets);
+        } catch (e) {
+          budgetsArray = [];
+        }
+      } else if (Array.isArray(context.budgets)) {
+        budgetsArray = context.budgets;
+      }
+    }
+    
+    if (notification.category === 'budget' && budgetsArray.length > 0) {
+      const budgetMessages: string[] = [];
+      
+      for (const budget of budgetsArray) {
+        let msg = message;
+        
+        // Simple string replacement
+        msg = msg.split('{{category}}').join(String(budget.category));
+        msg = msg.split('{{spent}}').join(new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(Number(budget.spent)));
+        msg = msg.split('{{limit}}').join(new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(Number(budget.limit)));
+        
+        const percent = budget.limit > 0 ? Math.round((Number(budget.spent) / Number(budget.limit)) * 100) : 0;
+        msg = msg.split('{{percent}}').join(String(percent));
+        
+        budgetMessages.push(msg);
+      }
+      
+      message = budgetMessages.join('\n');
+    } else {
+      message = this.interpolate(message, context);
+    }
 
     return {
       id: crypto.randomUUID(),
@@ -410,16 +478,6 @@ export class NotificationEngine {
       url: notification.url,
       data: notification.data,
     };
-  }
-
-  /**
-   * Interpolação de strings
-   */
-  private interpolate(template: string, context: RuleContext): string {
-    return template.replace(/\{\{([^}]+)\}\}/g, (match, path) => {
-      const value = this.getNestedValue(context, path.trim());
-      return value !== undefined ? String(value) : match;
-    });
   }
 
   /**
@@ -463,34 +521,19 @@ export function getNotificationEngine(): NotificationEngine {
  */
 export function useNotificationEngine() {
   const engine = getNotificationEngine();
-  const store = useNotificationsStore();
 
-  const checkBudgetAlerts = useCallback(
-    (budgets: BudgetStatus[]) => {
-      engine.setContext({ budgets });
-      engine.processRules().then((notifications) => {
-        notifications.forEach((n) => store.addNotification(n));
-      });
-    },
-    [engine, store]
-  );
+  const checkBudgetAlerts = useCallback((budgets: BudgetStatus[]) => {
+    engine.setContext({ budgets });
+    engine.processRules();
+  }, [engine]);
 
-  const checkGoalAlerts = useCallback(
-    (goals: GoalStatus[]) => {
-      engine.setContext({ goals });
-      engine.processRules().then((notifications) => {
-        notifications.forEach((n) => store.addNotification(n));
-      });
-    },
-    [engine, store]
-  );
+  const checkGoalAlerts = useCallback((goals: GoalStatus[]) => {
+    engine.setContext({ goals });
+    engine.processRules();
+  }, [engine]);
 
   return {
-    engine,
     checkBudgetAlerts,
     checkGoalAlerts,
   };
 }
-
-// Import useCallback
-import { useCallback } from 'react';

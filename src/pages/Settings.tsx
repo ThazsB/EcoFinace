@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '@/stores/authStore';
 import { useAppStore } from '@/stores/appStore';
-import { Camera, X } from 'lucide-react';
+import { Camera, X, FolderKanban } from 'lucide-react';
 
 export default function Settings() {
   const navigate = useNavigate();
@@ -196,6 +196,21 @@ export default function Settings() {
                 <span className="font-medium">{data.categories.length}</span>
               </div>
             </div>
+          </div>
+
+          {/* Gerenciamento de Categorias */}
+          <div className="bg-card p-6 rounded-lg border border-border">
+            <h2 className="text-lg font-semibold mb-4">Categorias</h2>
+            <p className="text-muted-foreground mb-4">
+              Gerencie suas categorias personalizadas para transações, orçamentos e metas.
+            </p>
+            <button
+              onClick={() => navigate('/categories')}
+              className="w-full px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors flex items-center justify-center gap-2"
+            >
+              <FolderKanban className="w-4 h-4" />
+              Gerenciar Categorias
+            </button>
           </div>
 
           {/* Armazenamento Local */}

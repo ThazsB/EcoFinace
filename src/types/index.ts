@@ -1,5 +1,6 @@
 export * from './notifications';
 export * from './notification-preferences';
+export * from './categories';
 
 export interface Profile {
   id: string;

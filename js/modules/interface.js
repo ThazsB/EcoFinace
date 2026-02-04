@@ -285,7 +285,7 @@ export function router(viewName) {
         'reports': 'Relatórios',
         'profiles': 'Perfis'
     };
-    document.getElementById('page-title').innerText = titles[viewName] || 'EcoFinance';
+    document.getElementById('page-title').innerText = titles[viewName] || 'Fins';
 
     // Ocultar botões de notificação e nova transação na view de perfis
     const btnNotifications = document.getElementById('btn-notifications');

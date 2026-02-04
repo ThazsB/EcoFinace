@@ -5,14 +5,14 @@ import Budgets from './pages/Budgets'
 import Goals from './pages/Goals'
 import Reports from './pages/Reports'
 import Settings from './pages/Settings'
+import Categories from './pages/Categories'
 import ProfileSelection from './pages/ProfileSelection'
 import NotFound from './pages/NotFound'
 import { AuthProvider, useAuth } from '@/context/AuthContext'
 import { DashboardLayout } from '@/components/layout/DashboardLayout'
 import { AnimatePresence } from 'framer-motion'
 import { LoadingScreen } from '@/components/ui/LoadingScreen'
-import { ToastContainer } from '@/components/notifications/ToastContainer'
-import { NotificationCenter } from '@/components/notifications/NotificationCenter'
+import { ToastContainer, NotificationCenter } from '@/components/notifications'
 
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   const { user, loading } = useAuth()
@@ -74,6 +74,7 @@ function App() {
               <Route path="goals" element={<Goals />} />
               <Route path="reports" element={<Reports />} />
               <Route path="settings" element={<Settings />} />
+              <Route path="categories" element={<Categories />} />
             </Route>
             
             {/* NotFound */}

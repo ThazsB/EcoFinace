@@ -1,10 +1,10 @@
 /**
- * Centro de Notificações do EcoFinance
+ * Centro de Notificações do Fins
  * Painel lateral com todas as notificações do usuário
  * Estilizado para combinar com o tema Midnight Slate
  */
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useRef, useCallback } from 'react';
 import { useNotificationsStore } from '@/stores/notificationsStore';
 import type { NotificationCategory, NotificationPayload, NotificationAction } from '@/types/notifications';
 import { NOTIFICATION_CATEGORY_CONFIG } from '@/types/notifications';
@@ -38,6 +38,32 @@ function formatTimeAgo(dateString: string): string {
   return date.toLocaleDateString('pt-BR');
 }
 
+// Componente wrapper para scroll horizontal com mouse wheel
+const HorizontalScrollWrapper: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const scrollRef = useRef<HTMLDivElement>(null);
+
+  const handleWheel = useCallback((e: React.WheelEvent) => {
+    if (scrollRef.current) {
+      // Converte scroll vertical para horizontal
+      if (e.deltaY !== 0) {
+        scrollRef.current.scrollLeft += e.deltaY;
+        e.preventDefault();
+      }
+    }
+  }, []);
+
+  return (
+    <div
+      ref={scrollRef}
+      onWheel={handleWheel}
+      className="overflow-x-auto no-scrollbar cursor-grab active:cursor-grabbing"
+      style={{ scrollBehavior: 'smooth' }}
+    >
+      {children}
+    </div>
+  );
+};
+
 // Componente principal
 export const NotificationCenter: React.FC = () => {
   const {
@@ -46,9 +72,9 @@ export const NotificationCenter: React.FC = () => {
     isCenterOpen,
     closeCenter,
     markAsRead,
-    markAllAsRead,
     dismissNotification,
     deleteNotification,
+    clearAll,
   } = useNotificationsStore();
 
   const [activeTab, setActiveTab] = useState<TabCategory>('all');
@@ -109,12 +135,16 @@ export const NotificationCenter: React.FC = () => {
           </div>
           <div className="flex items-center gap-1">
             <button
-              onClick={markAllAsRead}
-              className="p-2 hover:bg-accent rounded-lg transition-colors"
-              title="Marcar todas como lidas"
-              disabled={unreadCount === 0}
+              onClick={() => {
+                if (confirm('Tem certeza que deseja excluir todas as notificações?')) {
+                  clearAll();
+                }
+              }}
+              className="p-2 hover:bg-destructive/20 rounded-lg transition-colors"
+              title="Excluir todas as notificações"
+              disabled={notifications.length === 0}
             >
-              <CheckCheck className="w-5 h-5 text-muted-foreground" />
+              <Trash2 className="w-5 h-5 text-muted-foreground hover:text-destructive" />
             </button>
             <button
               onClick={() => setShowSettings(!showSettings)}
@@ -167,25 +197,32 @@ export const NotificationCenter: React.FC = () => {
         {showSettings && <NotificationSettingsPanel />}
 
         {/* Tabs */}
-        <div className="flex flex-shrink-0 w-full justify-around gap-1 p-1.5 border-b border-border flex-wrap">
-          <TabButton
-            active={activeTab === 'all'}
-            onClick={() => setActiveTab('all')}
-            count={notifications.length}
-          >
-            Todas
-          </TabButton>
-          {Object.entries(NOTIFICATION_CATEGORY_CONFIG).map(([key, config]) => (
-            <TabButton
-              key={key}
-              active={activeTab === key}
-              onClick={() => setActiveTab(key as NotificationCategory)}
-              count={notifications.filter((n) => n.category === key).length}
-            >
-              <span className="mr-1">{config.icon}</span>
-              {config.label}
-            </TabButton>
-          ))}
+        <div className="flex flex-shrink-0 w-full justify-center p-1">
+          <HorizontalScrollWrapper>
+            <div className="inline-flex items-center bg-accent/30 rounded-lg p-0.5 border border-border/50">
+              <TabButton
+                active={activeTab === 'all'}
+                onClick={() => setActiveTab('all')}
+                count={notifications.length}
+                isFirst
+              >
+                Todas
+              </TabButton>
+              {Object.entries(NOTIFICATION_CATEGORY_CONFIG).map(([key, config], index, arr) => (
+                <TabButton
+                  key={key}
+                  active={activeTab === key}
+                  onClick={() => setActiveTab(key as NotificationCategory)}
+                  count={notifications.filter((n) => n.category === key).length}
+                  isMiddle={index > 0}
+                  isLast={index === arr.length - 1}
+                >
+                  <span>{config.icon}</span>
+                  {config.label}
+                </TabButton>
+              ))}
+            </div>
+          </HorizontalScrollWrapper>
         </div>
 
         {/* Notification List */}
@@ -248,68 +285,61 @@ export const NotificationCenter: React.FC = () => {
                   }
                 });
               }}
-              className="w-full py-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
+              className="w-full py-2 text-sm text-muted-foreground hover:text-foreground transition-colors flex items-center justify-center gap-2"
             >
+              <CheckCheck className="w-4 h-4" />
               Marcar todas como lidas
             </button>
           </div>
         )}
       </div>
-
-      {/* CSS for animations */}
-      <style>{`
-        @keyframes slide-in-right {
-          from {
-            transform: translateX(100%);
-          }
-          to {
-            transform: translateX(0);
-          }
-        }
-        .animate-slide-in-right {
-          animation: slide-in-right 0.3s ease-out;
-        }
-        .scrollbar-hide::-webkit-scrollbar {
-          display: none;
-        }
-        .scrollbar-hide {
-          -ms-overflow-style: none;
-          scrollbar-width: none;
-        }
-      `}</style>
     </>
   );
 };
 
-// Componente de botão de tab
+// Componente de botão de tab estilo Segmented Control
 const TabButton: React.FC<{
   children: React.ReactNode;
   active: boolean;
   onClick: () => void;
   count?: number;
-}> = ({ children, active, onClick, count }) => (
-  <button
-    onClick={onClick}
-    className={`flex items-center justify-center gap-1 px-2 py-2 text-xs rounded-md whitespace-nowrap transition-all ${
-      active
-        ? 'bg-primary text-primary-foreground font-medium'
-        : 'text-muted-foreground hover:bg-accent hover:text-foreground'
-    }`}
-  >
-    {children}
-    {count !== undefined && count > 0 && (
-      <span
-        className={`text-xs px-1.5 py-0.5 rounded-full ${
-          active
-            ? 'bg-primary-foreground/20'
-            : 'bg-accent'
-        }`}
-      >
-        {count > 99 ? '99+' : count}
+  isFirst?: boolean;
+  isMiddle?: boolean;
+  isLast?: boolean;
+}> = ({ children, active, onClick, count, isFirst, isMiddle, isLast }) => {
+  // Determina o raio das bordas baseado na posição
+  const roundedClass = isFirst 
+    ? 'rounded-l-md' 
+    : isLast 
+      ? 'rounded-r-md' 
+      : 'rounded-none';
+
+  return (
+    <button
+      onClick={onClick}
+      className={`relative flex items-center justify-center gap-1.5 px-3 py-1.5 text-xs font-medium whitespace-nowrap transition-all duration-200 ${roundedClass} ${
+        active
+          ? 'bg-background text-foreground shadow-sm'
+          : 'text-muted-foreground hover:text-foreground hover:bg-accent/50'
+      }`}
+    >
+      <span className="flex items-center gap-1">
+        {children}
+        {count !== undefined && count > 0 && (
+          <span
+            className={`text-[10px] px-1 py-0.5 rounded ${
+              active
+                ? 'bg-muted text-muted-foreground'
+                : 'text-muted-foreground/70'
+            }`}
+          >
+            {count > 99 ? '99+' : count}
+          </span>
+        )}
       </span>
-    )}
-  </button>
-);
+    </button>
+  );
+};
 
 // Componente de item de notificação
 const NotificationItem: React.FC<{
@@ -370,7 +400,7 @@ const NotificationItem: React.FC<{
             </span>
           </div>
 
-          <p className="text-sm text-muted-foreground mt-1 line-clamp-2">
+          <p className="text-sm text-muted-foreground mt-1 line-clamp-3">
             {notification.message}
           </p>
 

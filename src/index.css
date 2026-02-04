@@ -49,6 +49,19 @@
   }
 }
 
+@keyframes slide-in-right {
+  from {
+    transform: translateX(100%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+
+.animate-slide-in-right {
+  animation: slide-in-right 0.3s ease-out;
+}
+
 @keyframes slide-out {
   from {
     opacity: 1;
@@ -74,7 +87,7 @@
 }
 
 .animate-progress {
-  animation: progress-shrink 5s linear forwards;
+  animation: progress-shrink 3s linear forwards;
 }
 
 @layer base {
@@ -111,4 +124,30 @@
 
 .no-scrollbar::-webkit-scrollbar {
   display: none;  /* Chrome, Safari and Opera */
+}
+
+/* Scroll horizontal com mouse wheel */
+.overflow-x-scroll-touch {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Converter scroll vertical para horizontal em elementos específicos */
+.scroll-wheel-horizontal {
+  overflow-x: auto;
+  overflow-y: hidden;
+}
+
+.scroll-wheel-horizontal:hover {
+  overflow-x: auto;
+}
+
+/* Para elementos com scroll horizontal, permitir wheel horizontal */
+.scroll-wheel-horizontal {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.scroll-wheel-horizontal::-webkit-scrollbar {
+  display: none;
 }

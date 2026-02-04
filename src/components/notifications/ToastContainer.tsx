@@ -1,141 +1,237 @@
 /**
- * Toast Container do EcoFinance
- * Sistema de notificações toast/snackbar
+ * Toast Container do Fins
+ * Sistema de notificações toast/snackbar com suporte a fila, retry e responsividade
  * Estilizado para combinar com o tema Midnight Slate
  */
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { createPortal } from 'react-dom';
+import { useNotificationsStore } from '../../stores/notificationsStore';
+import type { ToastType, TransactionType } from '../../types/notifications';
 import {
   X,
   CheckCircle,
   AlertTriangle,
   AlertCircle,
   Info,
+  RefreshCw,
+  ArrowDownCircle,
+  ArrowUpCircle,
 } from 'lucide-react';
-import type { NotificationAction } from '@/types/notifications';
-import { useNotificationsStore } from '@/stores/notificationsStore';
 
-interface ToastProps {
+// Constantes de configuração
+const TOAST_DURATION = 3000; // 3 segundos padrão
+const TOAST_DISPLAY_INTERVAL = 400; // ms entre toasts na fila
+const MAX_TOASTS_DESKTOP = 5;
+const MAX_TOASTS_MOBILE = 3;
+
+// Interface do item de toast
+interface ToastItem {
   id: string;
   title: string;
   message: string;
-  type: 'success' | 'warning' | 'error' | 'info';
+  type: ToastType;
   duration?: number;
-  action?: NotificationAction;
-  onClose: (id: string) => void;
-  onAction?: (action: NotificationAction) => void;
+  action?: ToastAction;
+  createdAt: number;
+  retryAction?: () => void;
+  transactionType?: TransactionType; // Para estilização específica de transação
 }
 
-const Toast: React.FC<ToastProps> = ({
-  id,
-  title,
-  message,
-  type,
-  duration: propDuration,
-  action,
-  onClose,
-  onAction,
-}) => {
+// Interface de ação para toast
+interface ToastAction {
+  id: string;
+  label: string;
+  icon?: React.ReactNode;
+  primary?: boolean;
+  onClick?: () => void;
+}
+
+// Configuração de cores por tipo (incluindo distinction expense/income)
+const getToastColors = (type: ToastType, transactionType?: TransactionType) => {
+  // Se for transação de despesa, usar tons vermelhos mesmo no "sucesso"
+  if (transactionType === 'expense') {
+    return {
+      border: 'border-l-red-500 bg-gradient-to-r from-red-500/20 to-red-500/5 dark:from-red-500/10 dark:to-red-500/5',
+      iconBg: 'bg-red-100 dark:bg-red-900/50',
+      iconColor: 'text-red-600 dark:text-red-400',
+      progress: 'bg-red-500',
+    };
+  }
+  
+  // Se for receita, usar tons verdes
+  if (transactionType === 'income') {
+    return {
+      border: 'border-l-green-500 bg-gradient-to-r from-green-500/20 to-green-500/5 dark:from-green-500/10 dark:to-green-500/5',
+      iconBg: 'bg-green-100 dark:bg-green-900/50',
+      iconColor: 'text-green-600 dark:text-green-400',
+      progress: 'bg-green-500',
+    };
+  }
+  
+  const colors = {
+    success: {
+      border: 'border-l-green-500 bg-gradient-to-r from-green-500/20 to-green-500/5 dark:from-green-500/10 dark:to-green-500/5',
+      iconBg: 'bg-green-100 dark:bg-green-900/50',
+      iconColor: 'text-green-600 dark:text-green-400',
+      progress: 'bg-green-500',
+    },
+    error: {
+      border: 'border-l-red-500 bg-gradient-to-r from-red-500/20 to-red-500/5 dark:from-red-500/10 dark:to-red-500/5',
+      iconBg: 'bg-red-100 dark:bg-red-900/50',
+      iconColor: 'text-red-600 dark:text-red-400',
+      progress: 'bg-red-500',
+    },
+    warning: {
+      border: 'border-l-yellow-500 bg-gradient-to-r from-yellow-500/20 to-yellow-500/5 dark:from-yellow-500/10 dark:to-yellow-500/5',
+      iconBg: 'bg-yellow-100 dark:bg-yellow-900/50',
+      iconColor: 'text-yellow-600 dark:text-yellow-400',
+      progress: 'bg-yellow-500',
+    },
+    info: {
+      border: 'border-l-blue-500 bg-gradient-to-r from-blue-500/20 to-blue-:from-blue-500/10 dark:to-blue-500/5',
+      iconBg: 'bg-blue-500/5 dark100 dark:bg-blue-900/50',
+      iconColor: 'text-blue-600 dark:text-blue-400',
+      progress: 'bg-blue-500',
+    },
+  };
+  
+  return colors[type] || colors.info;
+};
+
+// Obter ícone baseado no tipo
+const getToastIcon = (type: ToastType, transactionType?: string) => {
+  // Transações têm ícones específicos
+  if (transactionType === 'expense') {
+    return <ArrowDownCircle className="w-5 h-5" />;
+  }
+  if (transactionType === 'income') {
+    return <ArrowUpCircle className="w-5 h-5" />;
+  }
+  
+  const icons = {
+    success: <CheckCircle className="w-5 h-5" />,
+    error: <AlertCircle className="w-5 h-5" />,
+    warning: <AlertTriangle className="w-5 h-5" />,
+    info: <Info className="w-5 h-5" />,
+  };
+  
+  return icons[type] || icons.info;
+};
+
+// Componente Toast Individual
+interface ToastProps {
+  item: ToastItem;
+  onClose: (id: string) => void;
+}
+
+const Toast: React.FC<ToastProps> = ({ item, onClose }) => {
   const [isExiting, setIsExiting] = useState(false);
   const [progress, setProgress] = useState(100);
-  const { preferences } = useNotificationsStore();
-  
-  // Usar a duração das preferências do usuário ou a duração passada como prop
-  const isAutoDismissEnabled = preferences.autoDismissing;
-  const userDismissDelay = preferences.autoDismissDelay * 1000; // converter para ms
-  const duration = propDuration !== undefined 
-    ? propDuration 
-    : (isAutoDismissEnabled ? userDismissDelay : 0);
+  const startTimeRef = useRef(Date.now());
+  const duration = item.duration || TOAST_DURATION;
+  const colors = getToastColors(item.type, item.transactionType);
 
-  // Animação da barra de progresso
+  // Timer para remoção automática
   useEffect(() => {
-    if (duration > 0) {
-      const interval = 50;
-      const decrement = 100 / (duration / interval);
-      const timer = setInterval(() => {
-        setProgress((prev) => Math.max(0, prev - decrement));
-      }, interval);
+    if (duration <= 0) return;
 
-      return () => clearInterval(timer);
-    }
-  }, [duration]);
+    const interval = setInterval(() => {
+      const elapsed = Date.now() - startTimeRef.current;
+      const remaining = Math.max(0, ((duration - elapsed) / duration) * 100);
+      setProgress(remaining);
 
-  // Auto dismiss
-  useEffect(() => {
-    if (duration > 0) {
-      const timer = setTimeout(() => {
+      if (elapsed >= duration) {
         setIsExiting(true);
-        setTimeout(() => onClose(id), 300);
-      }, duration);
+        setTimeout(() => onClose(item.id), 300);
+      }
+    }, 50);
 
-      return () => clearTimeout(timer);
-    }
-  }, [duration, id, onClose]);
+    return () => clearInterval(interval);
+  }, [duration, item.id, onClose]);
 
-  const icons = {
-    success: <CheckCircle className="w-5 h-5 text-green-500" />,
-    warning: <AlertTriangle className="w-5 h-5 text-orange-500" />,
-    error: <AlertCircle className="w-5 h-5 text-destructive" />,
-    info: <Info className="w-5 h-5 text-primary" />,
-  };
-
-  const colors = {
-    success: 'border-l-green-500 bg-green-500/10',
-    warning: 'border-l-orange-500 bg-orange-500/10',
-    error: 'border-l-destructive bg-destructive/10',
-    info: 'border-l-primary bg-primary/10',
-  };
-
-  const iconBgColors = {
-    success: 'bg-green-500/20',
-    warning: 'bg-orange-500/20',
-    error: 'bg-destructive/20',
-    info: 'bg-primary/20',
+  const handleClose = () => {
+    setIsExiting(true);
+    setTimeout(() => onClose(item.id), 300);
   };
 
   return (
     <div
       className={`
-        flex items-start gap-3 p-4 rounded-lg shadow-lg border-l-4
+        toast-item
+        flex items-start gap-3 p-4 rounded-lg shadow-lg
+        border-l-4 backdrop-blur-sm
         transform transition-all duration-300 ease-out
-        bg-card ${colors[type]}
+        ${colors.border}
         ${isExiting ? 'translate-x-full opacity-0' : 'translate-x-0 opacity-100'}
-        max-w-sm w-full
+        w-full max-w-sm
+        md:max-w-md
+        pointer-events-auto
       `}
+      role="alert"
+      aria-live="polite"
     >
       {/* Icon */}
-      <div className={`flex-shrink-0 mt-0.5 p-2 rounded-full ${iconBgColors[type]}`}>
-        {icons[type]}
+      <div className={`flex-shrink-0 mt-0.5 p-2 rounded-full ${colors.iconBg} ${colors.iconColor}`}>
+        {getToastIcon(item.type, item.transactionType)}
       </div>
 
       {/* Content */}
       <div className="flex-1 min-w-0">
-        <h4 className="font-medium text-foreground text-sm">
-          {title}
+        <h4 className="font-medium text-foreground text-sm md:text-base">
+          {item.title}
         </h4>
         <p className="text-sm text-muted-foreground mt-0.5 line-clamp-2">
-          {message}
+          {item.message}
         </p>
 
-        {/* Action Button */}
-        {action && (
-          <button
-            onClick={() => onAction?.(action)}
-            className="mt-2 text-sm font-medium text-primary hover:text-primary/80 transition-colors"
-          >
-            {action.label}
-          </button>
+        {/* Action Buttons */}
+        {item.action && (
+          <div className="flex gap-2 mt-2">
+            <button
+              onClick={() => {
+                item.action?.onClick?.();
+                handleClose();
+              }}
+              className={`
+                text-sm font-medium px-3 py-1.5 rounded transition-colors
+                ${item.action.primary
+                  ? 'bg-primary text-primary-foreground hover:bg-primary/90'
+                  : 'bg-accent text-accent-foreground hover:bg-accent/80'}
+              `}
+            >
+              <span className="flex items-center gap-1">
+                {item.action.icon}
+                {item.action.label}
+              </span>
+            </button>
+            
+            {/* Retry Button for Error Toasts */}
+            {item.type === 'error' && item.retryAction && (
+              <button
+                onClick={() => {
+                  item.retryAction?.();
+                  handleClose();
+                }}
+                className="text-sm font-medium px-3 py-1.5 rounded
+                         bg-orange-100 text-orange-700 hover:bg-orange-200
+                         dark:bg-orange-900/30 dark:text-orange-400 dark:hover:bg-orange-900/50
+                         flex items-center gap-1"
+              >
+                <RefreshCw className="w-3.5 h-3.5" />
+                Tentar Novamente
+              </button>
+            )}
+          </div>
         )}
       </div>
 
       {/* Close Button */}
       <button
-        onClick={() => {
-          setIsExiting(true);
-          setTimeout(() => onClose(id), 300);
-        }}
-        className="flex-shrink-0 p-1 hover:bg-accent rounded transition-colors"
+        onClick={handleClose}
+        className="flex-shrink-0 p-1.5 hover:bg-accent rounded transition-colors
+                 focus:outline-none focus:ring-2 focus:ring-primary"
+        aria-label="Fechar notificação"
       >
         <X className="w-4 h-4 text-muted-foreground" />
       </button>
@@ -144,15 +240,7 @@ const Toast: React.FC<ToastProps> = ({
       {duration > 0 && (
         <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-transparent rounded-b-lg overflow-hidden">
           <div
-            className={`h-full transition-all duration-50 ${
-              type === 'error'
-                ? 'bg-destructive'
-                : type === 'warning'
-                  ? 'bg-orange-500'
-                  : type === 'success'
-                    ? 'bg-green-500'
-                    : 'bg-primary'
-            }`}
+            className={`h-full transition-all duration-50 ${colors.progress}`}
             style={{ width: `${progress}%` }}
           />
         </div>
@@ -161,17 +249,42 @@ const Toast: React.FC<ToastProps> = ({
   );
 };
 
-interface ToastItem {
-  id: string;
-  title: string;
-  message: string;
-  type: 'success' | 'warning' | 'error' | 'info';
-  duration?: number;
-  action?: NotificationAction;
-}
-
+// Container de Toast com sistema de fila
 export const ToastContainer: React.FC = () => {
   const [toasts, setToasts] = useState<ToastItem[]>([]);
+  const [queue, setQueue] = useState<ToastItem[]>([]);
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
+
+  // Detectar se é mobile
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
+
+  // Calcular máximo de toasts baseado no dispositivo
+  const maxToasts = isMobile ? MAX_TOASTS_MOBILE : MAX_TOASTS_DESKTOP;
+
+  // Processar fila de notificações
+  useEffect(() => {
+    if (queue.length > 0 && toasts.length < maxToasts && !isProcessing) {
+      setIsProcessing(true);
+      
+      const processNext = () => {
+        const nextToast = queue[0];
+        setToasts((prev) => [...prev, nextToast]);
+        setQueue((prev) => prev.slice(1));
+        setIsProcessing(false);
+      };
+
+      // Adicionar com pequeno intervalo para suavidade
+      setTimeout(processNext, TOAST_DISPLAY_INTERVAL);
+    }
+  }, [queue, toasts.length, maxToasts, isProcessing]);
 
   // Listen for toast events
   useEffect(() => {
@@ -180,102 +293,363 @@ export const ToastContainer: React.FC = () => {
         title,
         message,
         type = 'info',
-        duration = 5000,
+        duration = TOAST_DURATION,
         action,
+        retryAction,
+        transactionType,
       } = event.detail;
 
       const id = crypto.randomUUID();
+      const newToast: ToastItem = {
+        id,
+        title,
+        message,
+        type,
+        duration,
+        action,
+        retryAction,
+        createdAt: Date.now(),
+        transactionType,
+      };
 
-      setToasts((prev) => {
-        // Limitar a 5 toasts visíveis
-        const newToasts = [...prev, { id, title, message, type, duration, action }];
-        if (newToasts.length > 5) {
-          return newToasts.slice(-5);
-        }
-        return newToasts;
-      });
+      // Usar o sistema de detecção de duplicatas do store (fuzzy matching)
+      const isDuplicate = useNotificationsStore.getState().hasDuplicateNotification(title, message, type);
+
+      if (isDuplicate) {
+        // Atualizar timestamp do toast existente em vez de criar novo
+        setToasts((prev) =>
+          prev.map((t) =>
+            t.title === title && t.message === message ? { ...t, createdAt: Date.now() } : t
+          )
+        );
+        return;
+      }
+
+      // Adicionar à fila se limite atingido
+      if (toasts.length >= maxToasts) {
+        setQueue((prev) => [...prev, newToast]);
+      } else {
+        setToasts((prev) => [...prev, newToast]);
+      }
     };
 
     window.addEventListener('app-toast', handleToast as EventListener);
     return () =>
       window.removeEventListener('app-toast', handleToast as EventListener);
-  }, []);
+  }, [toasts.length, queue.length, maxToasts]);
 
+  // Remover toast
   const removeToast = useCallback((id: string) => {
     setToasts((prev) => prev.filter((t) => t.id !== id));
   }, []);
 
-  const handleAction = useCallback(
-    (toast: ToastItem, action: NotificationAction) => {
-      if (action.handler) {
-        window.dispatchEvent(
-          new CustomEvent('notification-action', {
-            detail: { notificationId: toast.id, action: action.id },
-          })
-        );
-      }
-      if (action.url) {
-        window.location.href = action.url;
-      }
-      removeToast(toast.id);
-    },
-    [removeToast]
-  );
-
-  // Use portal to render at document body
+  // Render via portal para evitar problemas de z-index
   if (typeof document === 'undefined') return null;
 
   return createPortal(
-    <div className="fixed bottom-4 right-4 z-[100] flex flex-col gap-2 pointer-events-none">
+    <div
+      className={`
+        fixed bottom-4 right-4 z-[9999]
+        flex flex-col gap-2
+        w-full max-w-sm px-4
+        md:max-w-md md:px-0
+        md:w-auto
+        pointer-events-none
+        ${isMobile ? 'bottom-4 right-4' : 'bottom-6 right-6'}
+      `}
+      aria-live="polite"
+      aria-label="Notificações"
+    >
       {toasts.map((toast) => (
-        <div key={toast.id} className="pointer-events-auto">
-          <Toast
-            {...toast}
-            onClose={removeToast}
-            onAction={(action) => handleAction(toast, action)}
-          />
-        </div>
+        <Toast key={toast.id} item={toast} onClose={removeToast} />
       ))}
+      
+      {/* Fila de espera */}
+      {queue.length > 0 && (
+        <div className="text-xs text-muted-foreground text-center mt-2">
+          +{queue.length} notificação{queue.length > 1 ? 's' : ''} na fila
+        </div>
+      )}
     </div>,
     document.body
   );
 };
 
-// Hook para mostrar toasts
-export function useToast() {
-  const showToast = useCallback(
-    (
-      title: string,
-      message: string,
-      type: 'success' | 'warning' | 'error' | 'info' = 'info',
-      duration?: number,
-      action?: NotificationAction
-    ) => {
-      if (typeof window !== 'undefined') {
-        const event = new CustomEvent('app-toast', {
-          detail: { title, message, type, duration, action },
-        });
-        window.dispatchEvent(event);
-      }
+// Hook useToast - hook básico para mostrar toasts
+export const useToast = () => {
+  const showToast = useCallback((toast: {
+    title: string;
+    message: string;
+    type?: ToastType;
+    duration?: number;
+    action?: ToastAction;
+    retryAction?: () => void;
+    transactionType?: TransactionType;
+  }) => {
+    window.dispatchEvent(new CustomEvent('app-toast', { detail: toast }));
+  }, []);
+
+  return { showToast };
+};
+
+// Função notify - função utilitária para mostrar toasts (pode ser usada diretamente)
+interface NotifyProps {
+  title: string;
+  message: string;
+  type?: ToastType;
+  duration?: number;
+  action?: ToastAction;
+  retryAction?: () => void;
+  transactionType?: TransactionType;
+}
+
+export const notify = ({
+  title,
+  message,
+  type = 'info',
+  duration = TOAST_DURATION,
+  action,
+  retryAction,
+  transactionType,
+}: NotifyProps) => {
+  window.dispatchEvent(
+    new CustomEvent('app-toast', {
+      detail: { title, message, type, duration, action, retryAction, transactionType },
+    })
+  );
+};
+
+// Hook useTransactionToast - hook especializado para notificações de transações
+export const useTransactionToast = () => {
+  const showTransactionSuccess = useCallback(
+    (data: { type: 'income' | 'expense'; action: 'add' | 'edit'; description: string; amount: number }) => {
+      const { type: transactionType, action, description, amount } = data;
+
+      const actionText = {
+        add: 'adicionada',
+        edit: 'atualizada',
+      };
+
+      const formattedAmount = new Intl.NumberFormat('pt-BR', {
+        style: 'currency',
+        currency: 'BRL',
+      }).format(Math.abs(amount));
+
+      window.dispatchEvent(
+        new CustomEvent('app-toast', {
+          detail: {
+            title: 'Transação ' + actionText[action],
+            message: `${transactionType === 'expense' ? 'Despesa' : 'Receita'} "${description}" de ${formattedAmount} foi ${actionText[action]} com sucesso`,
+            type: transactionType === 'expense' ? 'warning' : 'success',
+            duration: TOAST_DURATION,
+            transactionType,
+          },
+        })
+      );
     },
     []
   );
 
-  return { showToast };
-}
+  const showTransactionError = useCallback(
+    (data: { type: 'income' | 'expense'; description: string; amount: number; error?: string; retryAction?: () => void }) => {
+      const { type: transactionType, description, amount, error, retryAction } = data;
 
-// Função helper para criar toast rapidamente
-export function notify(
-  title: string,
-  message: string,
-  type: 'success' | 'warning' | 'error' | 'info' = 'info'
-) {
-  if (typeof window !== 'undefined') {
-    const event = new CustomEvent('app-toast', {
-      detail: { title, message, type, duration: 5000 },
-    });
-    window.dispatchEvent(event);
-  }
-}
+      const formattedAmount = new Intl.NumberFormat('pt-BR', {
+        style: 'currency',
+        currency: 'BRL',
+      }).format(Math.abs(amount));
+
+      window.dispatchEvent(
+        new CustomEvent('app-toast', {
+          detail: {
+            title: 'Erro ao processar transação',
+            message: error || `Não foi possível processar a ${transactionType === 'expense' ? 'despesa' : 'receita'} "${description}" de ${formattedAmount}`,
+            type: 'error',
+            duration: TOAST_DURATION,
+            retryAction,
+          },
+        })
+      );
+    },
+    []
+  );
+
+  const showTransactionDelete = useCallback(
+    (data: { type: 'income' | 'expense'; description: string; amount: number }) => {
+      const { type: transactionType, description, amount } = data;
+
+      const formattedAmount = new Intl.NumberFormat('pt-BR', {
+        style: 'currency',
+        currency: 'BRL',
+      }).format(Math.abs(amount));
+
+      window.dispatchEvent(
+        new CustomEvent('app-toast', {
+          detail: {
+            title: 'Transação excluída',
+            message: `${transactionType === 'expense' ? 'Despesa' : 'Receita'} "${description}" de ${formattedAmount} foi excluída com sucesso`,
+            type: 'info',
+            duration: TOAST_DURATION,
+            transactionType,
+          },
+        })
+      );
+    },
+    []
+  );
+
+  return { showTransactionSuccess, showTransactionError, showTransactionDelete };
+};
+
+// Hook useGoalToast - hook especializado para notificações de metas
+export const useGoalToast = () => {
+  const showGoalCreated = useCallback(
+    (data: { name: string; target: number }) => {
+      const { name, target } = data;
+      const formattedTarget = new Intl.NumberFormat('pt-BR', {
+        style: 'currency',
+        currency: 'BRL',
+      }).format(target);
+
+      window.dispatchEvent(
+        new CustomEvent('app-toast', {
+          detail: {
+            title: 'Meta criada',
+            message: `Meta "${name}" de ${formattedTarget} foi criada com sucesso`,
+            type: 'success',
+            duration: TOAST_DURATION,
+          },
+        })
+      );
+    },
+    []
+  );
+
+  const showGoalContribution = useCallback(
+    (data: { name: string; current: number; target: number }) => {
+      const { name, current, target } = data;
+      const formattedCurrent = new Intl.NumberFormat('pt-BR', {
+        style: 'currency',
+        currency: 'BRL',
+      }).format(current);
+      const percentage = Math.round((current / target) * 100);
+
+      window.dispatchEvent(
+        new CustomEvent('app-toast', {
+          detail: {
+            title: 'Meta atualizada',
+            message: `Contribuição de ${formattedCurrent} adicionada à meta "${name}" (${percentage}% concluído)`,
+            type: 'success',
+            duration: TOAST_DURATION,
+          },
+        })
+      );
+    },
+    []
+  );
+
+  const showGoalError = useCallback(
+    (data: { name: string; error?: string; retryAction?: () => void }) => {
+      const { name, error, retryAction } = data;
+
+      window.dispatchEvent(
+        new CustomEvent('app-toast', {
+          detail: {
+            title: 'Erro ao processar meta',
+            message: error || `Não foi possível processar a meta "${name}"`,
+            type: 'error',
+            duration: TOAST_DURATION,
+            retryAction,
+          },
+        })
+      );
+    },
+    []
+  );
+
+  const showGoalDelete = useCallback(
+    (data: { name: string }) => {
+      const { name } = data;
+
+      window.dispatchEvent(
+        new CustomEvent('app-toast', {
+          detail: {
+            title: 'Meta excluída',
+            message: `Meta "${name}" foi excluída com sucesso`,
+            type: 'info',
+            duration: TOAST_DURATION,
+          },
+        })
+      );
+    },
+    []
+  );
+
+  return { showGoalCreated, showGoalContribution, showGoalError, showGoalDelete };
+};
+
+// Hook useBudgetToast - hook especializado para notificações de orçamentos
+export const useBudgetToast = () => {
+  const showBudgetCreated = useCallback(
+    (data: { category: string; limit: number }) => {
+      const { category, limit } = data;
+      const formattedLimit = new Intl.NumberFormat('pt-BR', {
+        style: 'currency',
+        currency: 'BRL',
+      }).format(limit);
+
+      window.dispatchEvent(
+        new CustomEvent('app-toast', {
+          detail: {
+            title: 'Orçamento criado',
+            message: `Orçamento para "${category}" de ${formattedLimit} foi criado com sucesso`,
+            type: 'success',
+            duration: TOAST_DURATION,
+          },
+        })
+      );
+    },
+    []
+  );
+
+  const showBudgetError = useCallback(
+    (data: { category: string; error?: string; retryAction?: () => void }) => {
+      const { category, error, retryAction } = data;
+
+      window.dispatchEvent(
+        new CustomEvent('app-toast', {
+          detail: {
+            title: 'Erro ao processar orçamento',
+            message: error || `Não foi possível processar o orçamento de "${category}"`,
+            type: 'error',
+            duration: TOAST_DURATION,
+            retryAction,
+          },
+        })
+      );
+    },
+    []
+  );
+
+  const showBudgetDelete = useCallback(
+    (data: { category: string }) => {
+      const { category } = data;
+
+      window.dispatchEvent(
+        new CustomEvent('app-toast', {
+          detail: {
+            title: 'Orçamento excluído',
+            message: `Orçamento para "${category}" foi excluído com sucesso`,
+            type: 'info',
+            duration: TOAST_DURATION,
+          },
+        })
+      );
+    },
+    []
+  );
+
+  return { showBudgetCreated, showBudgetError, showBudgetDelete };
+};
 
 export default ToastContainer;

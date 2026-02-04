@@ -104,7 +104,7 @@ export const NOTIFICATION_LIMITS = {
   
   // Limites por categoria por dia
   dailyLimits: {
-    budget: 5,
+    budget: 20,
     goal: 3,
     transaction: 10,
     reminder: 5,

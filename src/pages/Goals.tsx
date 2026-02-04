@@ -1,12 +1,27 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useAuthStore } from '@/stores/authStore';
 import { useAppStore } from '@/stores/appStore';
+import { useNotificationEngine } from '@/engine/notification-engine';
 import { formatCurrency } from '@/utils/currency';
 import { Goal } from '@/types';
+import { useGoalToast } from '@/components/notifications';
+import { useNotificationsStore } from '@/stores/notificationsStore';
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
+import { Target, Trash2 } from 'lucide-react';
+
+interface GoalStatus {
+  id: string;
+  name: string;
+  current: number;
+  target: number;
+}
 
 export default function Goals() {
   const { user } = useAuthStore();
   const { data, init, addGoal, deleteGoal, addGoalValue } = useAppStore();
+  const { checkGoalAlerts } = useNotificationEngine();
+  const { showGoalCreated, showGoalContribution, showGoalError, showGoalDelete } = useGoalToast();
+  const { addNotification, hasDuplicateNotification } = useNotificationsStore();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isAddValueModalOpen, setIsAddValueModalOpen] = useState(false);
   const [selectedGoalId, setSelectedGoalId] = useState<number | null>(null);
@@ -15,6 +30,27 @@ export default function Goals() {
     target: '',
   });
   const [goalValue, setGoalValue] = useState('');
+
+  // Confirm dialog state
+  const [confirmDialog, setConfirmDialog] = useState<{
+    isOpen: boolean;
+    goal: Goal | null;
+    isDeleting: boolean;
+  }>({
+    isOpen: false,
+    goal: null,
+    isDeleting: false,
+  });
+
+  // Calculate goal statuses for notifications
+  const getGoalStatuses = useCallback((): GoalStatus[] => {
+    return data.goals.map((goal: Goal) => ({
+      id: String(goal.id),
+      name: goal.name,
+      current: goal.current,
+      target: goal.target,
+    }));
+  }, [data.goals]);
 
   useEffect(() => {
     if (user) {
@@ -39,14 +75,25 @@ export default function Goals() {
     addGoal({
       name: newGoal.name.trim(),
       target,
+    }).then(() => {
+      // Mostrar toast de sucesso
+      showGoalCreated({ name: newGoal.name.trim(), target });
+      
+      setNewGoal({
+        name: '',
+        target: '',
+      });
+      setIsModalOpen(false);
+      
+      // Check goal alerts after adding new goal
+      if (data.goals.length > 0) {
+        const goalStatuses = getGoalStatuses();
+        checkGoalAlerts(goalStatuses);
+      }
+    }).catch((error) => {
+      showGoalError({ name: newGoal.name.trim() });
+      console.error('Erro ao criar meta:', error);
     });
-
-    setNewGoal({
-      name: '',
-      target: '',
-    });
-
-    setIsModalOpen(false);
   };
 
   const handleAddValueSubmit = (e: React.FormEvent) => {
@@ -63,21 +110,124 @@ export default function Goals() {
       return;
     }
 
-    addGoalValue(selectedGoalId, value);
-    setGoalValue('');
-    setSelectedGoalId(null);
-    setIsAddValueModalOpen(false);
+    addGoalValue(selectedGoalId, value).then(() => {
+      // Verificar se a meta atingiu 100%
+      const goal = data.goals.find((g: Goal) => g.id === selectedGoalId);
+      if (goal) {
+        const newProgress = goal.current + value;
+        const wasBelowTarget = goal.current < goal.target;
+        const isNowComplete = newProgress >= goal.target;
+        
+        if (wasBelowTarget && isNowComplete) {
+          // Verificar se já existe notificação de meta atingida para esta meta
+          const goalTitle = '🏆 Meta Atingida!';
+          const goalMessage = `Parabéns! Você completou a meta "${goal.name}" de ${new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(goal.target)}`;
+          
+          // Verificar duplicata antes de adicionar
+          const hasDuplicate = hasDuplicateNotification(goalTitle, goalMessage, 'achievement', 300000); // 5 minutos
+          
+          if (!hasDuplicate) {
+            // Meta concluída! Adicionar notificação ao Notification Center
+            addNotification({
+              profileId: localStorage.getItem('ecofinance_active_profile') || '',
+              title: goalTitle,
+              message: goalMessage,
+              category: 'achievement',
+              priority: 'high',
+              channels: ['in_app'],
+              actions: [
+                {
+                  id: 'view_goal',
+                  label: 'Ver Meta',
+                  primary: true,
+                },
+              ],
+            });
+          }
+          
+          // Mostrar toast de contribuição
+          showGoalContribution({ name: goal.name, current: value, target: newProgress });
+        } else {
+          // Apenas contribuição normal
+          showGoalContribution({ name: goal.name, current: value, target: newProgress });
+        }
+      }
+      
+      setGoalValue('');
+      setSelectedGoalId(null);
+      setIsAddValueModalOpen(false);
+      
+      // Check goal alerts after adding value
+      if (data.goals.length > 0) {
+        const goalStatuses = getGoalStatuses();
+        checkGoalAlerts(goalStatuses);
+      }
+    }).catch((error) => {
+      const goal = data.goals.find((g: Goal) => g.id === selectedGoalId);
+      showGoalError({ name: goal?.name || 'Meta' });
+      console.error('Erro ao adicionar valor à meta:', error);
+    });
   };
 
-  const handleDelete = (id: number) => {
-    if (confirm('Tem certeza que deseja excluir esta meta?')) {
-      deleteGoal(id);
+  // Open confirm dialog for deletion
+  const handleDeleteRequest = (id: number) => {
+    const goalToDelete = data.goals.find((g: Goal) => g.id === id);
+    if (goalToDelete) {
+      setConfirmDialog({
+        isOpen: true,
+        goal: goalToDelete,
+        isDeleting: false,
+      });
     }
   };
 
-  const handleAddValue = (id: number) => {
-    setSelectedGoalId(id);
-    setIsAddValueModalOpen(true);
+  // Confirm deletion
+  const handleConfirmDelete = () => {
+    if (confirmDialog.goal) {
+      setConfirmDialog(prev => ({ ...prev, isDeleting: true }));
+      
+      showGoalDelete({ name: confirmDialog.goal.name });
+      deleteGoal(confirmDialog.goal.id);
+      
+      setConfirmDialog({
+        isOpen: false,
+        goal: null,
+        isDeleting: false,
+      });
+    }
+  };
+
+  // Cancel deletion
+  const handleCancelDelete = () => {
+    setConfirmDialog({
+      isOpen: false,
+      goal: null,
+      isDeleting: false,
+    });
+  };
+
+  // Format goal details for dialog
+  const getGoalDetails = (goal: Goal) => {
+    const progressPercent = Math.round((goal.current / goal.target) * 100);
+    
+    return [
+      {
+        label: 'Meta',
+        value: goal.name,
+      },
+      {
+        label: 'Valor Atual',
+        value: formatCurrency(goal.current),
+      },
+      {
+        label: 'Valor Alvo',
+        value: formatCurrency(goal.target),
+      },
+      {
+        label: 'Progresso',
+        value: `${progressPercent}%`,
+      },
+    ];
   };
 
   return (
@@ -118,23 +268,11 @@ export default function Goals() {
                 <div className="flex items-center justify-between mb-4">
                   <h3 className="text-lg font-semibold">{goal.name}</h3>
                   <button
-                    onClick={() => handleDelete(goal.id)}
+                    onClick={() => handleDeleteRequest(goal.id)}
                     className="p-2 text-red-500 hover:bg-red-500/10 rounded-full transition-colors"
                     title="Excluir meta"
                   >
-                    <svg
-                      className="w-5 h-5"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                      stroke="currentColor"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-                      />
-                    </svg>
+                    <Trash2 className="w-5 h-5" />
                   </button>
                 </div>
 
@@ -167,7 +305,10 @@ export default function Goals() {
                 </div>
 
                 <button
-                  onClick={() => handleAddValue(goal.id)}
+                  onClick={() => {
+                    setSelectedGoalId(goal.id);
+                    setIsAddValueModalOpen(true);
+                  }}
                   className="w-full bg-primary text-primary-foreground px-4 py-2 rounded-lg hover:bg-primary/90 transition-colors"
                 >
                   Adicionar Valor
@@ -269,6 +410,22 @@ export default function Goals() {
             </form>
           </div>
         </div>
+      )}
+
+      {/* Delete Confirmation Dialog */}
+      {confirmDialog.goal && (
+        <ConfirmDialog
+          isOpen={confirmDialog.isOpen}
+          title="Excluir Meta"
+          message="Tem certeza que deseja excluir esta meta?"
+          type="goal"
+          details={getGoalDetails(confirmDialog.goal)}
+          confirmText="Excluir"
+          cancelText="Cancelar"
+          onConfirm={handleConfirmDelete}
+          onCancel={handleCancelDelete}
+          isDeleting={confirmDialog.isDeleting}
+        />
       )}
     </div>
   );

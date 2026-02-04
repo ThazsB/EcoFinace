@@ -1,13 +1,25 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useAuthStore } from '@/stores/authStore';
 import { useAppStore } from '@/stores/appStore';
+import { useNotificationEngine } from '@/engine/notification-engine';
 import { BudgetSummary } from '@/components/BudgetSummary';
 import { formatCurrency } from '@/utils/currency';
 import { DEFAULT_CATEGORIES, Transaction, Budget } from '@/types';
+import { useBudgetToast } from '@/components/notifications';
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
+import { Wallet, Trash2, Edit2 } from 'lucide-react';
+
+interface BudgetStatus {
+  category: string;
+  spent: number;
+  limit: number;
+}
 
 export default function Budgets() {
   const { user } = useAuthStore();
   const { data, init, addBudget, deleteBudget, updateBudget } = useAppStore();
+  const { checkBudgetAlerts } = useNotificationEngine();
+  const { showBudgetCreated, showBudgetError, showBudgetDelete } = useBudgetToast();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [predictiveData, setPredictiveData] = useState<Array<{ category: string; projectedTotal: number; willExceed: boolean; daysRemaining: number }>>([]);
@@ -20,13 +32,45 @@ export default function Budgets() {
     limit: '',
   });
 
+  // Confirm dialog state
+  const [confirmDialog, setConfirmDialog] = useState<{
+    isOpen: boolean;
+    budget: Budget | null;
+    isDeleting: boolean;
+  }>({
+    isOpen: false,
+    budget: null,
+    isDeleting: false,
+  });
+
+  // Calculate budget statuses for notifications
+  const getBudgetStatuses = useCallback((): BudgetStatus[] => {
+    const now = new Date();
+    const currentMonthTransactions = data.transactions.filter((tx: Transaction) => {
+      const txDate = new Date(tx.date);
+      return txDate.getMonth() === now.getMonth() && txDate.getFullYear() === now.getFullYear();
+    });
+
+    return data.budgets.map((budget: Budget) => {
+      const currentSpent = currentMonthTransactions
+        .filter((tx: Transaction) => tx.type === 'expense' && tx.category === budget.category)
+        .reduce((sum: number, tx: Transaction) => sum + tx.amount, 0);
+
+      return {
+        category: budget.category,
+        spent: currentSpent,
+        limit: budget.limit,
+      };
+    });
+  }, [data.transactions, data.budgets]);
+
   useEffect(() => {
     if (user) {
       init(user.id);
     }
   }, [user, init]);
 
-  // Calculate predictive alerts
+  // Calculate predictive alerts and check notifications
   useEffect(() => {
     if (data.transactions.length > 0 && data.budgets.length > 0) {
       // Calculate projected spending
@@ -57,8 +101,11 @@ export default function Budgets() {
       });
       
       setPredictiveData(predictions);
+      
+      // Check for budget alerts
+      checkBudgetAlerts(getBudgetStatuses());
     }
-  }, [data.transactions, data.budgets, init]);
+  }, [data.transactions, data.budgets, init, getBudgetStatuses, checkBudgetAlerts]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -84,17 +131,23 @@ export default function Budgets() {
     addBudget({
       category: newBudget.category,
       limit,
-    });
+    }).then(() => {
+      // Mostrar toast de sucesso
+      showBudgetCreated({ category: newBudget.category, limit });
+      
+      setNewBudget({
+        category: '',
+        limit: '',
+      });
 
-    setNewBudget({
-      category: '',
-      limit: '',
+      setIsModalOpen(false);
+    }).catch((error) => {
+      showBudgetError({ category: newBudget.category });
+      console.error('Erro ao criar orçamento:', error);
     });
-
-    setIsModalOpen(false);
   };
 
-  const handleEdit = (budget: any) => {
+  const handleEdit = (budget: Budget) => {
     setEditBudget({
       category: budget.category,
       limit: budget.limit.toString(),
@@ -115,15 +168,84 @@ export default function Budgets() {
       ...editBudget,
       limit,
       profileId: localStorage.getItem('ecofinance_active_profile') || '',
+    }).then(() => {
+      setIsEditModalOpen(false);
+    }).catch((error) => {
+      showBudgetError({ category: editBudget.category });
+      console.error('Erro ao atualizar orçamento:', error);
     });
-
-    setIsEditModalOpen(false);
   };
 
-  const handleDelete = (category: string) => {
-    if (confirm(`Tem certeza que deseja excluir o orçamento para ${category}?`)) {
-      deleteBudget(category);
+  // Open confirm dialog for deletion
+  const handleDeleteRequest = (category: string) => {
+    const budgetToDelete = data.budgets.find((b: Budget) => b.category === category);
+    if (budgetToDelete) {
+      setConfirmDialog({
+        isOpen: true,
+        budget: budgetToDelete,
+        isDeleting: false,
+      });
     }
+  };
+
+  // Confirm deletion
+  const handleConfirmDelete = () => {
+    if (confirmDialog.budget) {
+      setConfirmDialog(prev => ({ ...prev, isDeleting: true }));
+      
+      showBudgetDelete({ category: confirmDialog.budget.category });
+      deleteBudget(confirmDialog.budget.category);
+      
+      setConfirmDialog({
+        isOpen: false,
+        budget: null,
+        isDeleting: false,
+      });
+    }
+  };
+
+  // Cancel deletion
+  const handleCancelDelete = () => {
+    setConfirmDialog({
+      isOpen: false,
+      budget: null,
+      isDeleting: false,
+    });
+  };
+
+  // Format budget details for dialog
+  const getBudgetDetails = (budget: Budget) => {
+    // Calculate current spent
+    const now = new Date();
+    const currentMonthTransactions = data.transactions.filter((tx: Transaction) => {
+      const txDate = new Date(tx.date);
+      return txDate.getMonth() === now.getMonth() && txDate.getFullYear() === now.getFullYear();
+    });
+    
+    const currentSpent = currentMonthTransactions
+      .filter((tx: Transaction) => tx.type === 'expense' && tx.category === budget.category)
+      .reduce((sum: number, tx: Transaction) => sum + tx.amount, 0);
+    
+    const percentUsed = Math.round((currentSpent / budget.limit) * 100);
+    
+    return [
+      {
+        label: 'Categoria',
+        value: budget.category,
+      },
+      {
+        label: 'Limite',
+        value: formatCurrency(budget.limit),
+      },
+      {
+        label: 'Gasto Atual',
+        value: formatCurrency(currentSpent),
+      },
+      {
+        label: 'Utilizado',
+        value: `${percentUsed}%`,
+      },
+    ];
   };
 
   return (
@@ -208,38 +330,14 @@ export default function Budgets() {
                     className="p-2 text-blue-500 hover:bg-blue-500/10 rounded-full transition-colors"
                     title="Editar orçamento"
                   >
-                    <svg
-                      className="w-5 h-5"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                      stroke="currentColor"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"
-                      />
-                    </svg>
+                    <Edit2 className="w-5 h-5" />
                   </button>
                   <button
-                    onClick={() => handleDelete(budget.category)}
+                    onClick={() => handleDeleteRequest(budget.category)}
                     className="p-2 text-red-500 hover:bg-red-500/10 rounded-full transition-colors"
                     title="Excluir orçamento"
                   >
-                    <svg
-                      className="w-5 h-5"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                      stroke="currentColor"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-                      />
-                    </svg>
+                    <Trash2 className="w-5 h-5" />
                   </button>
                 </div>
               </div>
@@ -355,6 +453,22 @@ export default function Budgets() {
             </form>
           </div>
         </div>
+      )}
+
+      {/* Delete Confirmation Dialog */}
+      {confirmDialog.budget && (
+        <ConfirmDialog
+          isOpen={confirmDialog.isOpen}
+          title="Excluir Orçamento"
+          message="Tem certeza que deseja excluir este orçamento?"
+          type="budget"
+          details={getBudgetDetails(confirmDialog.budget)}
+          confirmText="Excluir"
+          cancelText="Cancelar"
+          onConfirm={handleConfirmDelete}
+          onCancel={handleCancelDelete}
+          isDeleting={confirmDialog.isDeleting}
+        />
       )}
     </div>
   );

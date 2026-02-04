@@ -12,6 +12,120 @@ import type {
 import type { NotificationPreferences } from '@/types/notifications';
 import { DEFAULT_NOTIFICATION_PREFERENCES } from '@/types/notification-preferences';
 
+// Resultado da verificação de duplicata
+interface DuplicateCheckResult {
+  isDuplicate: boolean;
+  existingId?: string;
+  existingTimestamp?: string;
+}
+
+// Função robusta para verificar duplicatas de notificação
+export function checkForDuplicate(
+  notifications: NotificationPayload[],
+  title: string,
+  message: string,
+  category: NotificationCategory,
+  timeWindowMs: number = 60000 // 60 segundos padrão
+): DuplicateCheckResult {
+  const now = Date.now();
+  
+  // Primeiro, verificar se há uma notificação exatamente igual (ignoring timestamp)
+  const exactMatch = notifications.find(n => 
+    n.title === title && 
+    n.message === message &&
+    n.category === category &&
+    n.status !== 'dismissed'
+  );
+  
+  if (exactMatch) {
+    return {
+      isDuplicate: true,
+      existingId: exactMatch.id,
+      existingTimestamp: exactMatch.timestamp
+    };
+  }
+  
+  // Verificar dentro da janela de tempo para notificações similares
+  // Usamos uma fuzzy match para título (ignoring case e whitespace)
+  const normalizedTitle = title.toLowerCase().replace(/\s+/g, ' ').trim();
+  const normalizedMessage = message.toLowerCase().replace(/\s+/g, ' ').trim();
+  
+  const recentDuplicate = notifications.find(n => {
+    // Ignorar notificações muito antigas
+    const notificationTime = new Date(n.timestamp).getTime();
+    if (now - notificationTime > timeWindowMs) {
+      return false;
+    }
+    
+    // Ignorar notificações já descartadas
+    if (n.status === 'dismissed') {
+      return false;
+    }
+    
+    // Verificar se é uma notificação similar (dentro da mesma categoria)
+    if (n.category !== category) {
+      return false;
+    }
+    
+    const existingNormalizedTitle = n.title.toLowerCase().replace(/\s+/g, ' ').trim();
+    const existingNormalizedMessage = n.message.toLowerCase().replace(/\s+/g, ' ').trim();
+    
+    // Verificar similaridade do título (80% de match)
+    const titleSimilarity = calculateSimilarity(normalizedTitle, existingNormalizedTitle);
+    
+    // Verificar similaridade da mensagem
+    const messageSimilarity = calculateSimilarity(normalizedMessage, existingNormalizedMessage);
+    
+    // Se tanto título quanto mensagem são muito similares, é uma duplicata
+    return titleSimilarity > 0.8 && messageSimilarity > 0.8;
+  });
+  
+  if (recentDuplicate) {
+    return {
+      isDuplicate: true,
+      existingId: recentDuplicate.id,
+      existingTimestamp: recentDuplicate.timestamp
+    };
+  }
+  
+  return { isDuplicate: false };
+}
+
+// Função para calcular similaridade entre duas strings (0 a 1)
+function calculateSimilarity(str1: string, str2: string): number {
+  if (str1 === str2) return 1;
+  if (str1.length === 0 || str2.length === 0) return 0;
+  
+  // Usar algoritmo de Levenshtein para calcular distância
+  const track = Array(str2.length + 1).fill(null).map(() =>
+    Array(str1.length + 1).fill(null)
+  );
+  
+  for (let i = 0; i <= str1.length; i += 1) {
+    track[0][i] = i;
+  }
+  
+  for (let j = 0; j <= str2.length; j += 1) {
+    track[j][0] = j;
+  }
+  
+  for (let j = 1; j <= str2.length; j += 1) {
+    for (let i = 1; i <= str1.length; i += 1) {
+      const indicator = str1[i - 1] === str2[j - 1] ? 0 : 1;
+      track[j][i] = Math.min(
+        track[j][i - 1] + 1,
+        track[j - 1][i] + 1,
+        track[j - 1][i - 1] + indicator
+      );
+    }
+  }
+  
+  const distance = track[str2.length][str1.length];
+  const maxLength = Math.max(str1.length, str2.length);
+  
+  return maxLength === 0 ? 1 : 1 - distance / maxLength;
+}
+
 interface NotificationsState {
   // Estado das notificações
   notifications: NotificationPayload[];
@@ -30,7 +144,8 @@ interface NotificationsState {
   isPermissionRequested: boolean;
   
   // Ações de notificação
-  addNotification: (notification: Omit<NotificationPayload, 'id' | 'timestamp' | 'status'>) => void;
+  addNotification: (notification: Omit<NotificationPayload, 'id' | 'timestamp' | 'status'>) => boolean;
+  hasDuplicateNotification: (title: string, message: string, category: NotificationCategory, timeWindowMs?: number) => boolean;
   markAsRead: (id: string) => void;
   markAllAsRead: () => void;
   dismissNotification: (id: string) => void;
@@ -55,6 +170,9 @@ interface NotificationsState {
   // Toast Actions
   triggerToast: (notification: NotificationPayload) => void;
   processQueuedNotifications: () => void;
+  
+  // Internal Actions
+  _recalculateUnreadCount: () => void;
 }
 
 export const useNotificationsStore = create<NotificationsState>()(
@@ -69,13 +187,29 @@ export const useNotificationsStore = create<NotificationsState>()(
       lastSyncTime: null,
       isCenterOpen: false,
       isPermissionRequested: false,
+
+      // Recalcular unreadCount ao reidratar do storage
+      _recalculateUnreadCount: () => {
+        const { notifications } = get();
+        const unread = notifications.filter((n) => n.status !== 'read' && n.status !== 'dismissed').length;
+        set({ unreadCount: unread });
+      },
       
       // Ações de notificação
       addNotification: (notification) => {
-        const { preferences } = get();
+        const { preferences, notifications } = get();
         
         // Verificar se global está habilitado
-        if (!preferences.globalEnabled) return;
+        if (!preferences.globalEnabled) {
+          return false;
+        }
+        
+        // Verificar se já existe notificação com mesmo título e mensagem (evitar duplicatas)
+        const duplicateCheck = checkForDuplicate(notifications, notification.title, notification.message, notification.category);
+        if (duplicateCheck.isDuplicate) {
+          // Notificação duplicada, não adicionar
+          return false;
+        }
         
         // Verificar horário de silêncio
         if (preferences.quietHours.enabled && isInQuietHours(preferences.quietHours)) {
@@ -86,18 +220,18 @@ export const useNotificationsStore = create<NotificationsState>()(
             queuedAt: new Date().toISOString(),
           });
           localStorage.setItem('notification_queue', JSON.stringify(queued.slice(-50)));
-          return;
+          return true;
         }
         
-        // Verificar limite diário por categoria
+        // Verificar limite diário por categoria (apenas para notificações não-urgentes)
         const categoryLimit = getCategoryDailyLimit(notification.category);
-        if (categoryLimit > 0) {
+        if (categoryLimit > 0 && notification.priority !== 'urgent') {
           const todayNotifications = get().notifications.filter(n => 
             n.category === notification.category &&
             new Date(n.timestamp).toDateString() === new Date().toDateString()
           );
           if (todayNotifications.length >= categoryLimit) {
-            return; // Limite atingido
+            return false; // Limite atingido
           }
         }
         
@@ -113,11 +247,25 @@ export const useNotificationsStore = create<NotificationsState>()(
           unreadCount: state.unreadCount + 1,
         }));
         
-        // Trigger toast se configurado
+        // Trigger toast para notificações in_app
         const categoryConfig = preferences.categories[notification.category];
-        if (categoryConfig?.channels.includes('in_app')) {
+        const hasInAppChannel = categoryConfig?.channels.includes('in_app');
+        
+        // Mostra toast se:
+        // 1. Categoria tem canal in_app configurado, OU
+        // 2. É um orçamento (sempre mostra toast)
+        if (hasInAppChannel || notification.category === 'budget') {
           get().triggerToast(newNotification);
         }
+        
+        return true;
+      },
+      
+      // Função para verificar duplicatas externamente
+      hasDuplicateNotification: (title, message, category, timeWindowMs = 60000) => {
+        const { notifications } = get();
+        const result = checkForDuplicate(notifications, title, message, category, timeWindowMs);
+        return result.isDuplicate;
       },
       
       markAsRead: (id) => {
@@ -141,11 +289,16 @@ export const useNotificationsStore = create<NotificationsState>()(
       },
       
       dismissNotification: (id) => {
-        set((state) => ({
-          notifications: state.notifications.map((n) =>
-            n.id === id ? { ...n, status: 'dismissed' as const, dismissedAt: new Date().toISOString() } : n
-          ),
-        }));
+        set((state) => {
+          const notification = state.notifications.find((n) => n.id === id);
+          const wasUnread = notification && notification.status !== 'read';
+          return {
+            notifications: state.notifications.map((n) =>
+              n.id === id ? { ...n, status: 'dismissed' as const, dismissedAt: new Date().toISOString() } : n
+            ),
+            unreadCount: wasUnread ? Math.max(0, state.unreadCount - 1) : state.unreadCount,
+          };
+        });
       },
       
       deleteNotification: (id) => {
@@ -288,6 +441,15 @@ export const useNotificationsStore = create<NotificationsState>()(
       
       // Helper para trigger de toast
       triggerToast: (notification: NotificationPayload) => {
+        const { preferences } = get();
+        
+        // Usar a duração configurada pelo usuário ou o padrão baseado em prioridade
+        const defaultDuration = notification.priority === 'urgent' ? 10000 : 
+                               notification.priority === 'high' ? 7000 : 5000;
+        const userDuration = preferences.autoDismissing 
+          ? preferences.autoDismissDelay * 1000 
+          : defaultDuration;
+        
         if (typeof window !== 'undefined') {
           const event = new CustomEvent('app-toast', {
             detail: {
@@ -295,8 +457,7 @@ export const useNotificationsStore = create<NotificationsState>()(
               message: notification.message,
               type: notification.priority === 'urgent' ? 'error' : 
                     notification.priority === 'high' ? 'warning' : 'info',
-              duration: notification.priority === 'urgent' ? 10000 : 
-                        notification.priority === 'high' ? 7000 : 5000,
+              duration: userDuration,
               action: notification.actions?.[0],
             },
           });
@@ -312,6 +473,12 @@ export const useNotificationsStore = create<NotificationsState>()(
         preferences: state.preferences,
         isPermissionRequested: state.isPermissionRequested,
       }),
+      onRehydrateStorage: () => (state) => {
+        // Recalcular unreadCount ao recarregar do storage
+        if (state) {
+          state._recalculateUnreadCount();
+        }
+      },
     }
   )
 );
