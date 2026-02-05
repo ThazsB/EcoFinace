@@ -22,12 +22,14 @@ import {
   Settings
 } from 'lucide-react';
 import { useCategoriesStore, useFilteredCategories } from '@/stores/categoriesStore';
+import { useAppStore } from '@/stores/appStore';
 import { useToast } from '@/components/notifications';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { CategoryColorPicker } from './CategoryColorPicker';
 import { CategoryIconSelector } from './CategoryIconSelector';
 import type { Category, CategoryType, CategoryColor } from '@/types/categories';
 import { CATEGORY_COLORS, CATEGORY_ICONS } from '@/types/categories';
+import { showDeletionToast, DELETION_ELEMENTS } from '@/utils/deletion-toast';
 
 // Tipos de ordenação
 type SortOption = 'name' | 'usage' | 'type' | 'custom';
@@ -84,6 +86,17 @@ export const CategoriesManager: React.FC = () => {
     const profileId = localStorage.getItem('fins_active_profile') || 'default';
     init(profileId);
   }, [init]);
+
+  // Inicializar categories também no appStore (para sincronizar selects que usam appStore)
+  React.useEffect(() => {
+    const profileId = localStorage.getItem('ecofinance_active_profile') || localStorage.getItem('fins_active_profile') || 'default';
+    try {
+      const appInit = useAppStore.getState().init;
+      if (appInit) appInit(profileId);
+    } catch (e) {
+      // noop
+    }
+  }, []);
 
   // Atualizar store quando o estado local mudar
   React.useEffect(() => {
@@ -204,6 +217,8 @@ export const CategoriesManager: React.FC = () => {
           message: `A categoria "${formData.name}" foi criada com sucesso`,
           type: 'success',
         });
+        // sincronizar com appStore (apenas nome)
+        try { useAppStore.getState().addCategory(formData.name); } catch (e) { /* noop */ }
         setIsModalOpen(false);
       } else {
         showToast({
@@ -220,6 +235,10 @@ export const CategoriesManager: React.FC = () => {
           message: `A categoria foi atualizada com sucesso`,
           type: 'success',
         });
+        // Se o nome mudou, sincronizar com appStore
+        if (editingCategory.name !== formData.name) {
+          try { useAppStore.getState().editCategory(editingCategory.name, formData.name); } catch (e) { /* noop */ }
+        }
         setIsModalOpen(false);
       } else {
         showToast({
@@ -237,17 +256,21 @@ export const CategoriesManager: React.FC = () => {
 
     const result = await deleteCategory(categoryToDelete.id, migrateTo);
     if (result.success) {
-      showToast({
-        title: 'Categoria excluída',
-        message: result.message,
-        type: 'success',
-      });
+      showDeletionToast(
+        showToast,
+        DELETION_ELEMENTS.CATEGORY,
+        categoryToDelete.name,
+        true
+      );
+      try { useAppStore.getState().deleteCategory(categoryToDelete.name); } catch (e) { /* noop */ }
     } else {
-      showToast({
-        title: 'Erro',
-        message: result.message,
-        type: 'error',
-      });
+      showDeletionToast(
+        showToast,
+        DELETION_ELEMENTS.CATEGORY,
+        categoryToDelete.name,
+        false,
+        result.message
+      );
     }
     setDeleteConfirmOpen(false);
     setCategoryToDelete(null);
@@ -262,6 +285,8 @@ export const CategoriesManager: React.FC = () => {
         message: `Uma cópia de "${category.name}" foi criada`,
         type: 'success',
       });
+      // sincronizar cópia com appStore
+      try { useAppStore.getState().addCategory(`${category.name} (cópia)`); } catch (e) { /* noop */ }
     } else {
       showToast({
         title: 'Erro',

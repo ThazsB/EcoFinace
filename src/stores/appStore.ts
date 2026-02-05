@@ -1,8 +1,8 @@
 import { create } from 'zustand';
-import { Transaction, Budget, Goal, AppData, DEFAULT_CATEGORIES } from '@/types';
+import { Transaction, Budget, Goal, AppData, DEFAULT_CATEGORIES, FixedExpense } from '@/types';
 
 interface AppState {
-  data: Omit<AppData, 'notifications'>;
+  data: Omit<AppData, 'notifications'> & { fixedExpenses: FixedExpense[] };
   loading: boolean;
   init: (profileId: string) => Promise<void>;
   addTransaction: (transaction: Omit<Transaction, 'id' | 'profileId'>) => Promise<Transaction>;
@@ -18,6 +18,13 @@ interface AppState {
   deleteCategory: (categoryName: string) => Promise<void>;
   editCategory: (oldName: string, newName: string) => Promise<void>;
   getValidCategories: () => string[];
+  
+  // Métodos para valores fixos
+  addFixedExpense: (fixedExpense: Omit<FixedExpense, 'id' | 'profileId' | 'createdAt' | 'updatedAt'>) => Promise<FixedExpense>;
+  updateFixedExpense: (id: number, updatedFixedExpense: Partial<FixedExpense>) => Promise<FixedExpense | null>;
+  deleteFixedExpense: (id: number) => Promise<void>;
+  toggleFixedExpenseActive: (id: number) => Promise<void>;
+  getActiveFixedExpenses: () => FixedExpense[];
 }
 
 export const useAppStore = create<AppState>((set, get) => ({
@@ -25,7 +32,8 @@ export const useAppStore = create<AppState>((set, get) => ({
     transactions: [],
     budgets: [],
     goals: [],
-    categories: []
+    categories: [],
+    fixedExpenses: []
   },
   loading: false,
 
@@ -37,15 +45,48 @@ export const useAppStore = create<AppState>((set, get) => ({
       const budgets = JSON.parse(localStorage.getItem(`ecofinance_${profileId}_budgets`) || '[]');
       const goals = JSON.parse(localStorage.getItem(`ecofinance_${profileId}_goals`) || '[]');
       const categories = JSON.parse(localStorage.getItem(`ecofinance_${profileId}_categories`) || '[]');
+      const fixedExpenses = JSON.parse(localStorage.getItem(`ecofinance_${profileId}_fixedExpenses`) || '[]');
+
+      // Backwards-compat: also read legacy categories stored by the older categoriesStore
+      // which uses key `fins_categories_{profileId}` and stores an object with `categories: Category[]`.
+      let legacyCategoryNames: string[] = [];
+      try {
+        const legacyRaw = localStorage.getItem(`fins_categories_${profileId}`);
+        if (legacyRaw) {
+          const legacyData = JSON.parse(legacyRaw);
+          if (Array.isArray(legacyData)) {
+            // Older possible format: array of strings
+            legacyCategoryNames = legacyData.filter((c: any) => typeof c === 'string');
+          } else if (legacyData && Array.isArray(legacyData.categories)) {
+            // Newer categoriesStore format: { categories: Category[] }
+            legacyCategoryNames = legacyData.categories
+              .filter((c: any) => c && typeof c.name === 'string')
+              .map((c: any) => c.name);
+          }
+        }
+      } catch (e) {
+        // ignore parse errors
+      }
+
+      // Merge and dedupe category names (keep DEFAULT_CATEGORIES order first)
+      const mergedCategories = Array.from(new Set([...categories, ...legacyCategoryNames]));
 
       set({
         data: {
           transactions,
           budgets,
           goals,
-          categories
+          categories: mergedCategories,
+          fixedExpenses
         }
       });
+
+      // Persist merged categories back to ecofinance key so selects read the unified list
+      try {
+        localStorage.setItem(`ecofinance_${profileId}_categories`, JSON.stringify(mergedCategories));
+      } catch (e) {
+        // ignore storage errors
+      }
     } catch {
       // Silently fail on init
     } finally {
@@ -404,8 +445,89 @@ export const useAppStore = create<AppState>((set, get) => ({
     }
   },
 
+  // Métodos para valores fixos
+  addFixedExpense: async (fixedExpense) => {
+    const newFixedExpense: FixedExpense = {
+      ...fixedExpense,
+      id: Date.now(),
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      profileId: localStorage.getItem('ecofinance_active_profile') || ''
+    };
+
+    set(state => ({
+      data: {
+        ...state.data,
+        fixedExpenses: [...state.data.fixedExpenses, newFixedExpense]
+      }
+    }));
+
+    const profileId = localStorage.getItem('ecofinance_active_profile');
+    if (profileId) {
+      const currentData = JSON.parse(localStorage.getItem(`ecofinance_${profileId}_fixedExpenses`) || '[]');
+      localStorage.setItem(`ecofinance_${profileId}_fixedExpenses`, JSON.stringify([...currentData, newFixedExpense]));
+    }
+
+    return newFixedExpense;
+  },
+
+  updateFixedExpense: async (id, updatedFixedExpense) => {
+    set(state => {
+      const fixedExpenses = state.data.fixedExpenses.map((expense: FixedExpense) =>
+        expense.id === id ? { ...expense, ...updatedFixedExpense, updatedAt: new Date().toISOString() } : expense
+      );
+
+      return {
+        data: {
+          ...state.data,
+          fixedExpenses
+        }
+      };
+    });
+
+    const profileId = localStorage.getItem('ecofinance_active_profile');
+    if (profileId) {
+      const currentData = JSON.parse(localStorage.getItem(`ecofinance_${profileId}_fixedExpenses`) || '[]');
+      const updatedData = currentData.map((expense: FixedExpense) =>
+        expense.id === id ? { ...expense, ...updatedFixedExpense, updatedAt: new Date().toISOString() } : expense
+      );
+      localStorage.setItem(`ecofinance_${profileId}_fixedExpenses`, JSON.stringify(updatedData));
+    }
+
+    const updated = get().data.fixedExpenses.find((expense: FixedExpense) => expense.id === id);
+    return updated || null;
+  },
+
+  deleteFixedExpense: async (id) => {
+    set(state => ({
+      data: {
+        ...state.data,
+        fixedExpenses: state.data.fixedExpenses.filter((expense: FixedExpense) => expense.id !== id)
+      }
+    }));
+
+    const profileId = localStorage.getItem('ecofinance_active_profile');
+    if (profileId) {
+      const currentData = JSON.parse(localStorage.getItem(`ecofinance_${profileId}_fixedExpenses`) || '[]');
+      const updatedData = currentData.filter((expense: FixedExpense) => expense.id !== id);
+      localStorage.setItem(`ecofinance_${profileId}_fixedExpenses`, JSON.stringify(updatedData));
+    }
+  },
+
+  toggleFixedExpenseActive: async (id) => {
+    const expense = get().data.fixedExpenses.find((expense: FixedExpense) => expense.id === id);
+    if (expense) {
+      await get().updateFixedExpense(id, { active: !expense.active });
+    }
+  },
+
+  getActiveFixedExpenses: () => {
+    return get().data.fixedExpenses.filter((expense: FixedExpense) => expense.active);
+  },
+
   getValidCategories: () => {
-    return [...DEFAULT_CATEGORIES, ...get().data.categories];
+    const merged = Array.from(new Set([...DEFAULT_CATEGORIES, ...get().data.categories]));
+    return merged.sort((a, b) => a.localeCompare(b, 'pt-BR'));
   },
 
 

@@ -12,7 +12,7 @@ import { AuthProvider, useAuth } from '@/context/AuthContext'
 import { DashboardLayout } from '@/components/layout/DashboardLayout'
 import { AnimatePresence } from 'framer-motion'
 import { LoadingScreen } from '@/components/ui/LoadingScreen'
-import { ToastContainer, NotificationCenter } from '@/components/notifications'
+import { NotificationCenter, ToastContainer } from '@/components/notifications'
 
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   const { user, loading } = useAuth()
@@ -48,45 +48,44 @@ function App() {
       <HashRouter>
         <AnimatePresence mode='wait'>
           <Routes>
-            {/* Auth Routes */}
-            <Route 
-              path="/profile-selection" 
-              element={
-                <AuthRoute>
-                  <ProfileSelection />
-                </AuthRoute>
-              } 
-            />
-            
-            {/* Protected Routes */}
-            <Route 
-              path="/" 
-              element={
-                <ProtectedRoute>
-                  <DashboardLayout />
-                </ProtectedRoute>
-              }
-            >
-              <Route index element={<Navigate to="/dashboard" replace />} />
-              <Route path="dashboard" element={<Dashboard />} />
-              <Route path="transactions" element={<Transactions />} />
-              <Route path="budgets" element={<Budgets />} />
-              <Route path="goals" element={<Goals />} />
-              <Route path="reports" element={<Reports />} />
-              <Route path="settings" element={<Settings />} />
-              <Route path="categories" element={<Categories />} />
-            </Route>
-            
-            {/* NotFound */}
-            <Route path="*" element={<NotFound />} />
-          </Routes>
-        </AnimatePresence>
-      </HashRouter>
-      
-      {/* Notification Components */}
-      <ToastContainer />
-      <NotificationCenter />
-    </AuthProvider>
+              {/* Auth Routes */}
+              <Route 
+                path="/profile-selection" 
+                element={
+                  <AuthRoute>
+                    <ProfileSelection />
+                  </AuthRoute>
+                } 
+              />
+              
+              {/* Protected Routes */}
+              <Route 
+                path="/" 
+                element={
+                  <ProtectedRoute>
+                    <DashboardLayout />
+                  </ProtectedRoute>
+                }
+              >
+                <Route index element={<Navigate to="/dashboard" replace />} />
+                <Route path="dashboard" element={<Dashboard />} />
+                <Route path="transactions" element={<Transactions />} />
+                <Route path="budgets" element={<Budgets />} />
+                <Route path="goals" element={<Goals />} />
+                <Route path="reports" element={<Reports />} />
+                <Route path="settings" element={<Settings />} />
+                <Route path="categories" element={<Categories />} />
+              </Route>
+              
+              {/* NotFound */}
+              <Route path="*" element={<NotFound />} />
+            </Routes>
+          </AnimatePresence>
+        </HashRouter>
+        
+        <NotificationCenter />
+        <ToastContainer />
+      </AuthProvider>
   )
 }
 

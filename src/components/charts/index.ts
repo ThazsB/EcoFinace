@@ -1,2 +1,3 @@
 export { PieChart } from './PieChart';
 export { LineChart } from './LineChart';
+export { TrendChart } from './TrendChart';

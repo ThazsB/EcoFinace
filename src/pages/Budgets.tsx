@@ -7,6 +7,7 @@ import { formatCurrency } from '@/utils/currency';
 import { DEFAULT_CATEGORIES, Transaction, Budget } from '@/types';
 import { useBudgetToast } from '@/components/notifications';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
+import { ReportsSkeleton, Skeleton } from '@/components/ui/Skeleton';
 import { Wallet, Trash2, Edit2 } from 'lucide-react';
 
 interface BudgetStatus {
@@ -17,9 +18,10 @@ interface BudgetStatus {
 
 export default function Budgets() {
   const { user } = useAuthStore();
-  const { data, init, addBudget, deleteBudget, updateBudget } = useAppStore();
+  const { data, init, addBudget, deleteBudget, updateBudget, loading } = useAppStore();
   const { checkBudgetAlerts } = useNotificationEngine();
   const { showBudgetCreated, showBudgetError, showBudgetDelete } = useBudgetToast();
+  const [hasInitialized, setHasInitialized] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [predictiveData, setPredictiveData] = useState<Array<{ category: string; projectedTotal: number; willExceed: boolean; daysRemaining: number }>>([]);
@@ -65,9 +67,14 @@ export default function Budgets() {
   }, [data.transactions, data.budgets]);
 
   useEffect(() => {
-    if (user) {
-      init(user.id);
-    }
+    const initialize = async () => {
+      if (user) {
+        await init(user.id);
+        setHasInitialized(true);
+      }
+    };
+    
+    initialize();
   }, [user, init]);
 
   // Calculate predictive alerts and check notifications
@@ -248,6 +255,8 @@ export default function Budgets() {
     ];
   };
 
+  const isLoading = loading || !hasInitialized;
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -265,7 +274,21 @@ export default function Budgets() {
 
       {/* Budget Summary */}
       <div className="bg-card p-6 rounded-lg border border-border">
-        <BudgetSummary budgets={data.budgets} transactions={data.transactions} />
+        {isLoading ? (
+          <div className="space-y-4">
+            <Skeleton className="h-6 w-48 mb-4" />
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {Array.from({ length: 3 }).map((_, i) => (
+                <div key={i} className="p-4 rounded-lg bg-muted/50">
+                  <Skeleton className="h-4 w-24 mb-2" />
+                  <Skeleton className="h-6 w-32" />
+                </div>
+              ))}
+            </div>
+          </div>
+        ) : (
+          <BudgetSummary budgets={data.budgets} transactions={data.transactions} />
+        )}
       </div>
 
       {/* Predictive Alerts Section */}

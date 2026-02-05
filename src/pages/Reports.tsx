@@ -1,222 +1,325 @@
-import { useState, useEffect } from 'react';
+/**
+ * Relatórios - Página de Análise Financeira
+ * Refatorado com skeleton loading e utilitários centralizados
+ */
+
+import { useState, useEffect, useMemo } from 'react';
 import { useAuthStore } from '@/stores/authStore';
 import { useAppStore } from '@/stores/appStore';
 import { PieChart, LineChart } from '@/components/charts';
 import { formatCurrency } from '@/utils/currency';
+import { getCategoryIcon, getCategoryColor } from '@/utils/categoryIcons';
 import { Transaction } from '@/types';
+import { Download, Filter, Calendar } from 'lucide-react';
+import { ReportsSkeleton, Skeleton } from '@/components/ui/Skeleton';
+import { ExportModal, useExportModal } from '@/components/export/ExportModal';
 
 export default function Reports() {
   const { user } = useAuthStore();
-  const { data, init } = useAppStore();
+  const { data, init, loading } = useAppStore();
+  const { isOpen, open, close } = useExportModal();
   const [currentYear, setCurrentYear] = useState(new Date().getFullYear());
   const [selectedMonth, setSelectedMonth] = useState<number | null>(null);
+  const [hasInitialized, setHasInitialized] = useState(false);
 
   useEffect(() => {
-    if (user) {
-      init(user.id);
-    }
+    const initialize = async () => {
+      if (user) {
+        await init(user.id);
+        setHasInitialized(true);
+      }
+    };
+    
+    initialize();
   }, [user, init]);
 
-  // Filter transactions by selected year and month
-  const filteredTransactions = data.transactions.filter((tx: Transaction) => {
-    const txDate = new Date(tx.date);
-    const matchesYear = txDate.getFullYear() === currentYear;
-    const matchesMonth = selectedMonth !== null ? txDate.getMonth() === selectedMonth : true;
-    return matchesYear && matchesMonth;
-  });
-
-  // Calculate stats
-  const totalIncome = filteredTransactions
-    .filter((tx: Transaction) => tx.type === 'income')
-    .reduce((sum: number, tx: Transaction) => sum + tx.amount, 0);
-
-  const totalExpense = filteredTransactions
-    .filter((tx: Transaction) => tx.type === 'expense')
-    .reduce((sum: number, tx: Transaction) => sum + tx.amount, 0);
-
-  const netIncome = totalIncome - totalExpense;
-
-  // Prepare data for charts
-  const expenseByCategory = filteredTransactions
-    .filter((tx: Transaction) => tx.type === 'expense')
-    .reduce((acc: Record<string, number>, tx: Transaction) => {
-      acc[tx.category] = (acc[tx.category] || 0) + tx.amount;
-      return acc;
-    }, {} as Record<string, number>);
-
-  const monthlyData = Array.from({ length: 12 }, (_, i) => {
-    const monthTransactions = data.transactions.filter((tx: Transaction) => {
+  // Todos os hooks devem ser chamados sempre na mesma ordem
+  const filteredTransactions = useMemo(() => {
+    return data.transactions.filter((tx: Transaction) => {
       const txDate = new Date(tx.date);
-      return txDate.getFullYear() === currentYear && txDate.getMonth() === i;
+      const matchesYear = txDate.getFullYear() === currentYear;
+      const matchesMonth = selectedMonth !== null ? txDate.getMonth() === selectedMonth : true;
+      return matchesYear && matchesMonth;
     });
+  }, [data.transactions, currentYear, selectedMonth]);
 
-    const income = monthTransactions
+  const stats = useMemo(() => {
+    const totalIncome = filteredTransactions
       .filter((tx: Transaction) => tx.type === 'income')
       .reduce((sum: number, tx: Transaction) => sum + tx.amount, 0);
 
-    const expense = monthTransactions
+    const totalExpense = filteredTransactions
       .filter((tx: Transaction) => tx.type === 'expense')
       .reduce((sum: number, tx: Transaction) => sum + tx.amount, 0);
 
     return {
-      month: new Date(currentYear, i).toLocaleString('pt-BR', { month: 'short' }),
-      income,
-      expense,
+      totalIncome,
+      totalExpense,
+      netIncome: totalIncome - totalExpense,
     };
-  });
+  }, [filteredTransactions]);
 
-  // Generate year range for select
+  const expenseByCategory = useMemo(() => {
+    return filteredTransactions
+      .filter((tx: Transaction) => tx.type === 'expense')
+      .reduce((acc: Record<string, number>, tx: Transaction) => {
+        acc[tx.category] = (acc[tx.category] || 0) + tx.amount;
+        return acc;
+      }, {} as Record<string, number>);
+  }, [filteredTransactions]);
+
+  const monthlyData = useMemo(() => {
+    return Array.from({ length: 12 }, (_, i) => {
+      const monthTransactions = data.transactions.filter((tx: Transaction) => {
+        const txDate = new Date(tx.date);
+        return txDate.getFullYear() === currentYear && txDate.getMonth() === i;
+      });
+
+      const income = monthTransactions
+        .filter((tx: Transaction) => tx.type === 'income')
+        .reduce((sum: number, tx: Transaction) => sum + tx.amount, 0);
+
+      const expense = monthTransactions
+        .filter((tx: Transaction) => tx.type === 'expense')
+        .reduce((sum: number, tx: Transaction) => sum + tx.amount, 0);
+
+      return {
+        month: new Date(currentYear, i).toLocaleString('pt-BR', { month: 'short' }),
+        income,
+        expense,
+      };
+    });
+  }, [data.transactions, currentYear]);
+
+  const detailedTransactions = useMemo(() => {
+    return [...filteredTransactions].sort(
+      (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
+    );
+  }, [filteredTransactions]);
+
   const yearRange = Array.from({ length: 5 }, (_, i) => currentYear - 2 + i);
 
+  const months = [
+    'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
+    'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro',
+  ];
+
+  const isLoading = loading || !hasInitialized;
+
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold">Relatórios</h1>
-          <p className="text-muted-foreground">Análise detalhada das suas finanças</p>
-        </div>
-        <div className="flex gap-3">
-          <select
-            value={currentYear}
-            onChange={(e) => setCurrentYear(parseInt(e.target.value))}
-            className="px-4 py-2 bg-muted rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
-          >
-            {yearRange.map((year) => (
-              <option key={year} value={year}>
-                {year}
-              </option>
-            ))}
-          </select>
-
-          <select
-            value={selectedMonth ?? 'all'}
-            onChange={(e) => setSelectedMonth(e.target.value === 'all' ? null : parseInt(e.target.value))}
-            className="px-4 py-2 bg-muted rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
-          >
-            <option value="all">Todo Ano</option>
-            <option value={0}>Janeiro</option>
-            <option value={1}>Fevereiro</option>
-            <option value={2}>Março</option>
-            <option value={3}>Abril</option>
-            <option value={4}>Maio</option>
-            <option value={5}>Junho</option>
-            <option value={6}>Julho</option>
-            <option value={7}>Agosto</option>
-            <option value={8}>Setembro</option>
-            <option value={9}>Outubro</option>
-            <option value={10}>Novembro</option>
-            <option value={11}>Dezembro</option>
-          </select>
-        </div>
-      </div>
-
-      {/* Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className="bg-card p-6 rounded-lg border border-border">
-          <p className="text-sm text-muted-foreground">Total de Receitas</p>
-          <p className="text-3xl font-bold mt-2 text-green-500">
-            {formatCurrency(totalIncome)}
-          </p>
-        </div>
-
-        <div className="bg-card p-6 rounded-lg border border-border">
-          <p className="text-sm text-muted-foreground">Total de Despesas</p>
-          <p className="text-3xl font-bold mt-2 text-orange-500">
-            {formatCurrency(totalExpense)}
-          </p>
-        </div>
-
-        <div className="bg-card p-6 rounded-lg border border-border">
-          <p className="text-sm text-muted-foreground">Saldo Líquido</p>
-          <p className={`text-3xl font-bold mt-2 ${netIncome >= 0 ? 'text-green-500' : 'text-red-500'}`}>
-            {formatCurrency(netIncome)}
-          </p>
-        </div>
-      </div>
-
-      {/* Charts */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <div className="bg-card p-6 rounded-lg border border-border">
-          <h3 className="text-lg font-semibold mb-4">Gastos por Categoria</h3>
-          <PieChart data={expenseByCategory} />
-        </div>
-
-        <div className="bg-card p-6 rounded-lg border border-border">
-          <h3 className="text-lg font-semibold mb-4">Evolução Mensal</h3>
-          <LineChart data={monthlyData} />
-        </div>
-      </div>
-
-      {/* Detailed Transactions */}
-      <div className="bg-card p-6 rounded-lg border border-border">
-        <h3 className="text-lg font-semibold mb-4">Transações Detalhadas</h3>
-        
-        {filteredTransactions.length === 0 ? (
-          <div className="text-center text-muted-foreground p-8">
-            <p>Nenhuma transação encontrada para o período selecionado</p>
+    <>
+      <div className="space-y-6">
+        {/* Header */}
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-bold">Relatórios</h1>
+            <p className="text-muted-foreground">
+              Análise detalhada das suas finanças
+            </p>
           </div>
-        ) : (
-          <div className="space-y-3">
-            {filteredTransactions.map((tx: Transaction) => (
-              <div
-                key={tx.id}
-                className={`flex items-center justify-between p-4 rounded-lg border transition-colors ${
-                  tx.type === 'income'
-                    ? 'bg-green-500/10 border-green-500/20'
-                    : 'bg-orange-500/10 border-orange-500/20'
-                }`}
-              >
-                <div className="flex items-center gap-4">
-                  <div className="w-12 h-12 rounded-full bg-background flex items-center justify-center text-xl">
-                    {getCategoryIcon(tx.category)}
-                  </div>
-                  
-                  <div>
-                    <p className="font-medium">{tx.desc}</p>
-                    <p className="text-sm text-muted-foreground">
-                      {tx.category} • {new Date(tx.date).toLocaleDateString('pt-BR')}
-                    </p>
-                  </div>
-                </div>
+          <button
+            disabled={isLoading}
+            onClick={open}
+            className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors disabled:opacity-50"
+          >
+            <Download className="w-4 h-4" />
+            Exportar
+          </button>
+        </div>
 
-                <div className="flex items-center gap-4">
-                  <p className={`font-bold ${tx.type === 'income' ? 'text-green-500' : 'text-orange-500'}`}>
-                    {tx.type === 'income' ? '+' : '-'}{' '}{formatCurrency(tx.amount)}
-                  </p>
-                </div>
+        {/* Filters */}
+        <div className="bg-card p-4 rounded-lg border border-border">
+          <div className="flex flex-wrap gap-4">
+            <div className="flex items-center gap-2">
+              <Calendar className="w-4 h-4 text-muted-foreground" />
+              <select
+                value={currentYear}
+                disabled={isLoading}
+                onChange={(e) => setCurrentYear(parseInt(e.target.value))}
+                className="px-3 py-2 bg-muted rounded-lg focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-50"
+              >
+                {yearRange.map((year) => (
+                  <option key={year} value={year}>
+                    {year}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <Filter className="w-4 h-4 text-muted-foreground" />
+              <select
+                value={selectedMonth ?? 'all'}
+                disabled={isLoading}
+                onChange={(e) =>
+                  setSelectedMonth(e.target.value === 'all' ? null : parseInt(e.target.value))
+                }
+                className="px-3 py-2 bg-muted rounded-lg focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-50"
+              >
+                <option value="all">Todo o Ano</option>
+                {months.map((month, index) => (
+                  <option key={index} value={index}>
+                    {month}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+        </div>
+
+        {/* Summary Cards */}
+        {isLoading ? (
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {Array.from({ length: 3 }).map((_, i) => (
+              <div key={i} className="bg-card p-6 rounded-lg border border-border">
+                <Skeleton className="h-4 w-24 mb-2" />
+                <Skeleton className="h-8 w-32" />
               </div>
             ))}
           </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <StatCard
+              title="Total de Receitas"
+              value={formatCurrency(stats.totalIncome)}
+              color="text-green-500"
+              trend={stats.totalIncome > 0 ? 'up' : 'neutral'}
+            />
+            <StatCard
+              title="Total de Despesas"
+              value={formatCurrency(stats.totalExpense)}
+              color="text-orange-500"
+              trend={stats.totalExpense > 0 ? 'down' : 'neutral'}
+            />
+            <StatCard
+              title="Saldo Líquido"
+              value={formatCurrency(stats.netIncome)}
+              color={stats.netIncome >= 0 ? 'text-green-500' : 'text-red-500'}
+              trend={stats.netIncome >= 0 ? 'up' : 'down'}
+            />
+          </div>
         )}
+
+        {/* Charts */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div className="bg-card p-6 rounded-lg border border-border">
+            <h3 className="text-lg font-semibold mb-4">Gastos por Categoria</h3>
+            {isLoading ? (
+              <div className="h-64 bg-muted animate-pulse rounded-lg" />
+            ) : (
+              <PieChart data={expenseByCategory} />
+            )}
+          </div>
+
+          <div className="bg-card p-6 rounded-lg border border-border">
+            <h3 className="text-lg font-semibold mb-4">Evolução Mensal ({currentYear})</h3>
+            {isLoading ? (
+              <div className="h-64 bg-muted animate-pulse rounded-lg" />
+            ) : (
+              <LineChart data={monthlyData} />
+            )}
+          </div>
+        </div>
+
+        {/* Detailed Transactions */}
+        <div className="bg-card p-6 rounded-lg border border-border">
+          <h3 className="text-lg font-semibold mb-4">Transações Detalhadas</h3>
+
+          {isLoading ? (
+            <div className="space-y-3">
+              {Array.from({ length: 5 }).map((_, i) => (
+                <div key={i} className="flex items-center justify-between p-4 rounded-lg border border-border">
+                  <div className="flex items-center gap-4">
+                    <Skeleton className="w-12 h-12 rounded-full" />
+                    <div className="space-y-2">
+                      <Skeleton className="h-4 w-32" />
+                      <Skeleton className="h-3 w-24" />
+                    </div>
+                  </div>
+                  <Skeleton className="h-6 w-20" />
+                </div>
+              ))}
+            </div>
+          ) : detailedTransactions.length === 0 ? (
+            <div className="text-center text-muted-foreground p-8">
+              <p>Nenhuma transação encontrada para o período selecionado</p>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {detailedTransactions.map((tx: Transaction) => (
+                <div
+                  key={tx.id}
+                  className={`flex items-center justify-between p-4 rounded-lg border transition-colors ${
+                    tx.type === 'income'
+                      ? 'bg-green-500/10 border-green-500/20'
+                      : 'bg-orange-500/10 border-orange-500/20'
+                  }`}
+                >
+                  <div className="flex items-center gap-4">
+                    <div
+                      className="w-12 h-12 rounded-full bg-background flex items-center justify-center text-xl"
+                      style={{ backgroundColor: `${getCategoryColor(tx.category)}20` }}
+                    >
+                      {(() => {
+                        const IconComponent = getCategoryIcon(tx.category);
+                        const color = getCategoryColor(tx.category);
+                        return IconComponent ? <IconComponent size={24} style={{ color }} className="lucide-icon" /> : null;
+                      })()}
+                    </div>
+
+                    <div>
+                      <p className="font-medium">{tx.desc}</p>
+                      <p className="text-sm text-muted-foreground">
+                        {tx.category} • {(() => {
+                          const date = new Date(tx.date);
+                          date.setTime(date.getTime() + date.getTimezoneOffset() * 60000);
+                          return date.toLocaleDateString('pt-BR');
+                        })()}
+                      </p>
+                    </div>
+                  </div>
+
+                  <p
+                    className={`font-bold ${
+                      tx.type === 'income' ? 'text-green-500' : 'text-orange-500'
+                    }`}
+                  >
+                    {tx.type === 'income' ? '+' : '-'} {formatCurrency(tx.amount)}
+                  </p>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
       </div>
-    </div>
+
+      <ExportModal
+        isOpen={isOpen}
+        onClose={close}
+        data={{
+          transactions: data.transactions,
+          budgets: data.budgets,
+          goals: data.goals
+        }}
+        profileName={user?.name || 'usuario'}
+      />
+    </>
   );
 }
 
-const ICONS: Record<string, string> = {
-  'Alimentação': '🍔', 'Restaurante': '🍽️', 'Mercado': '🛒', 'Feira': '🥦',
-  'Casa': '🏠', 'Moradia': '🏡', 'Aluguel': '🔑', 'Condomínio': 'building',
-  'Transporte': '🚗', 'Combustível': '⛽', 'Uber': '🚖', 'Ônibus': '🚌',
-  'Lazer': '🎉', 'Cinema': '🍿', 'Jogos': '🎮', 'Séries': '📺',
-  'Saúde': '💊', 'Farmácia': '🏥', 'Médico': '👨‍⚕', 'Academia': '💪',
-  'Educação': '📚', 'Curso': '🎓', 'Livros': '📖',
-  'Viagem': '✈️', 'Hotel': '🏨',
-  'Salário': '💰', 'Investimentos': '📈', 'Poupança': '🐷',
-  'Outros': '📦'
-};
+// Componente StatCard
+interface StatCardProps {
+  title: string;
+  value: string;
+  color: string;
+  trend?: 'up' | 'down' | 'neutral';
+}
 
-function getCategoryIcon(category: string): string {
-  const normalizedCategory = category.toLowerCase();
-  
-  const directMatch = Object.keys(ICONS).find(key => 
-    key.toLowerCase() === normalizedCategory
+function StatCard({ title, value, color, trend }: StatCardProps) {
+  return (
+    <div className="bg-card p-6 rounded-lg border border-border">
+      <p className="text-sm text-muted-foreground">{title}</p>
+      <p className={`text-3xl font-bold mt-2 ${color}`}>{value}</p>
+    </div>
   );
-  if (directMatch) return ICONS[directMatch];
-
-  const keywordMatch = Object.keys(ICONS).find(key => 
-    normalizedCategory.includes(key.toLowerCase())
-  );
-  if (keywordMatch) return ICONS[keywordMatch];
-
-  return '📦';
 }

@@ -165,6 +165,23 @@ export const AVAILABLE_COLORS = [
 export const DEFAULT_CATEGORIES = ['Alimentação', 'Moradia', 'Transporte', 'Lazer', 'Saúde', 'Salário', 'Investimentos', 'Educação', 'Viagem', 'Outros'];
 
 /**
+ * Valor Fixo Anualizado
+ * Representa receitas ou despesas mensais repetitivas
+ */
+export interface FixedExpense {
+  id: number;
+  name: string;
+  amount: number;
+  type: 'income' | 'expense';
+  category: string;
+  active: boolean;
+  dayOfMonth: number; // Dia do mês em que o valor fixo será contabilizado (1-31)
+  createdAt: string;
+  updatedAt: string;
+  profileId: string;
+}
+
+/**
  * Período para resumos
  */
 export type SummaryPeriod = 'daily' | 'weekly' | 'monthly';
@@ -194,4 +211,5 @@ export interface AppData {
   budgets: Budget[];
   goals: Goal[];
   categories: string[];
+  fixedExpenses: FixedExpense[];
 }

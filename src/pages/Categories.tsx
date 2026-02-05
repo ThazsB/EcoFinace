@@ -6,17 +6,14 @@
 import { useState } from 'react'
 import { CategoriesManager } from '@/components/categories'
 
-export default function CategoriesPage() {
+export default function CategoriesPage() {  
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+    <div className="min-h-screen bg-gradient-to-r from-primary/5 to-primary/10">
       <div className="container mx-auto px-4 py-8">
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
+        <div className="mb-12 text-center">
+          <h1 className="text-6xl font-bold text-primary">
             Gerenciar Categorias
           </h1>
-          <p className="mt-2 text-gray-600 dark:text-gray-400">
-            Organize suas categorias de transações, orçamentos e metas
-          </p>
         </div>
         
         <CategoriesManager />

@@ -7,6 +7,7 @@ import { Goal } from '@/types';
 import { useGoalToast } from '@/components/notifications';
 import { useNotificationsStore } from '@/stores/notificationsStore';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
+import { ReportsSkeleton } from '@/components/ui/Skeleton';
 import { Target, Trash2 } from 'lucide-react';
 
 interface GoalStatus {
@@ -18,10 +19,11 @@ interface GoalStatus {
 
 export default function Goals() {
   const { user } = useAuthStore();
-  const { data, init, addGoal, deleteGoal, addGoalValue } = useAppStore();
+  const { data, init, addGoal, deleteGoal, addGoalValue, loading } = useAppStore();
   const { checkGoalAlerts } = useNotificationEngine();
   const { showGoalCreated, showGoalContribution, showGoalError, showGoalDelete } = useGoalToast();
   const { addNotification, hasDuplicateNotification } = useNotificationsStore();
+  const [hasInitialized, setHasInitialized] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isAddValueModalOpen, setIsAddValueModalOpen] = useState(false);
   const [selectedGoalId, setSelectedGoalId] = useState<number | null>(null);
@@ -53,9 +55,14 @@ export default function Goals() {
   }, [data.goals]);
 
   useEffect(() => {
-    if (user) {
-      init(user.id);
-    }
+    const initialize = async () => {
+      if (user) {
+        await init(user.id);
+        setHasInitialized(true);
+      }
+    };
+    
+    initialize();
   }, [user, init]);
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -230,6 +237,11 @@ export default function Goals() {
     ];
   };
 
+  // Mostrar skeleton enquanto carrega ou se não inicializou
+  if (loading || !hasInitialized) {
+    return <ReportsSkeleton />;
+  }
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -255,10 +267,24 @@ export default function Goals() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {data.goals.map((goal: Goal) => {
             const percentage = Math.min((goal.current / goal.target) * 100, 100);
-            let color = 'bg-green-500';
+            
+            // Estilo progressivo contínuo baseado no percentual
+            const getProgressStyle = (percent: number) => {
+              const p = Math.max(0, Math.min(100, percent));
 
-            if (percentage > 80) color = 'bg-orange-500';
-            if (percentage >= 100) color = 'bg-red-500';
+              // Interpolar matiz (hue) para transição suave: azul (220) -> verde (120)
+              const hueStart = 220; // azul
+              const hueEnd = 120; // verde
+              const hue = hueStart + (hueEnd - hueStart) * (p / 100);
+
+              // Criar duas paradas de cor próximas para um leve gradiente
+              const colorA = `hsl(${Math.round(hue)} 78% 48%)`;
+              const colorB = `hsl(${Math.round(Math.max(0, hue - 12))} 78% 42%)`;
+
+              return {
+                background: `linear-gradient(90deg, ${colorA}, ${colorB})`,
+              } as React.CSSProperties;
+            };
 
             return (
               <div
@@ -281,11 +307,11 @@ export default function Goals() {
                     <span className="text-muted-foreground">Progresso</span>
                     <span className="font-medium">{percentage.toFixed(0)}%</span>
                   </div>
-                  <div className="w-full bg-muted rounded-full h-2">
+                  <div className="w-full bg-muted rounded-full h-2 overflow-hidden">
                     <div
-                      className={`h-2 rounded-full transition-all duration-300 ${color}`}
-                      style={{ width: `${percentage}%` }}
-                    ></div>
+                      className="h-2 rounded-full transition-all duration-300"
+                      style={{ width: `${percentage}%`, ...getProgressStyle(percentage) }}
+                    />
                   </div>
                 </div>
 

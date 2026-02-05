@@ -24,7 +24,7 @@ export type NotificationCategory =
   | 'achievement';    // Conquistas
 
 // Tipos de toast (para notificações in-app)
-export type ToastType = 'info' | 'success' | 'warning' | 'error';
+export type ToastType = 'info' | 'success' | 'warning' | 'error' | 'delete';
 
 // Tipos de transação (para context toast)
 export type TransactionType = 'income' | 'expense';

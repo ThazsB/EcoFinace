@@ -36,6 +36,81 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }
   }, [profiles]); // Depende de profiles para garantir que sejam carregados
 
+        // Resetar perfil ativo quando o usuário fechar o site
+  useEffect(() => {
+    const PROFILE_KEY = 'ecofinance_active_profile';
+    const TIMESTAMP_KEY = 'ecofinance_profile_timestamp';
+    
+    // Verificar se a página foi reaberta após um tempo de inatividade
+    const checkAndClearProfile = () => {
+      const timestamp = localStorage.getItem(TIMESTAMP_KEY);
+      const profileActive = localStorage.getItem(PROFILE_KEY);
+      
+      if (profileActive && timestamp) {
+        const lastActivity = parseInt(timestamp);
+        const now = Date.now();
+        const timeDiff = now - lastActivity;
+        
+        // Se passaram mais de 30 segundos desde a última atividade, limpar o perfil
+        if (timeDiff > 30000) {
+          console.log('[AuthContext] Clearing profile due to inactivity:', timeDiff, 'ms');
+          localStorage.removeItem(PROFILE_KEY);
+          localStorage.removeItem(TIMESTAMP_KEY);
+          sessionStorage.removeItem('welcome_shown');
+          useAuthStore.setState({ user: null });
+        }
+      }
+    };
+
+    // Atualizar timestamp a cada 5 segundos se há perfil ativo
+    const updateTimestamp = () => {
+      const profileActive = localStorage.getItem(PROFILE_KEY);
+      if (profileActive) {
+        localStorage.setItem(TIMESTAMP_KEY, Date.now().toString());
+      }
+    };
+
+    const handleBeforeUnload = () => {
+      console.log('[AuthContext] BeforeUnload event fired - clearing profile');
+      localStorage.removeItem(PROFILE_KEY);
+      localStorage.removeItem(TIMESTAMP_KEY);
+      sessionStorage.removeItem('welcome_shown');
+      useAuthStore.setState({ user: null });
+    };
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'hidden') {
+        console.log('[AuthContext] Page hidden');
+        // Não limpar imediatamente para não interferir com navegação entre abas
+        // Apenas atualizar que a página ficou oculta
+      } else if (document.visibilityState === 'visible') {
+        console.log('[AuthContext] Page visible - checking profile');
+        // Verificar se deve limpar o perfil ao voltar a visualizar a página
+        checkAndClearProfile();
+      }
+    };
+
+    // Verificar perfil ao carregar a página
+    checkAndClearProfile();
+    
+    // Adicionar listeners
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    window.addEventListener('pagehide', handleBeforeUnload);
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    
+    // Atualizar timestamp periodicamente
+    const timestampInterval = setInterval(updateTimestamp, 5000);
+
+    console.log('[AuthContext] Added unload listeners and profile monitoring');
+
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+      window.removeEventListener('pagehide', handleBeforeUnload);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      clearInterval(timestampInterval);
+    };
+  }, [profiles]); // Depende de profiles para garantir que sejam carregados
+
   return (
     <AuthContext.Provider value={{
       user,

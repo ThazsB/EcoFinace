@@ -81,6 +81,15 @@ export const NotificationCenter: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [showSettings, setShowSettings] = useState(false);
   const [filterUnreadOnly, setFilterUnreadOnly] = useState(false);
+  const [isClosing, setIsClosing] = useState(false);
+
+  const handleClose = () => {
+    setIsClosing(true);
+    setTimeout(() => {
+      closeCenter();
+      setIsClosing(false);
+    }, 300);
+  };
 
   // Filtrar notificações
   const filteredNotifications = useMemo(() => {
@@ -106,18 +115,20 @@ export const NotificationCenter: React.FC = () => {
     });
   }, [notifications, activeTab, searchQuery, filterUnreadOnly]);
 
-  if (!isCenterOpen) return null;
+  if (!isCenterOpen && !isClosing) return null;
 
   return (
     <>
       {/* Backdrop */}
       <div
-        className="fixed inset-0 bg-black/60 z-40 backdrop-blur-sm"
-        onClick={closeCenter}
+        className={`fixed inset-0 bg-black/60 z-40 backdrop-blur-sm transition-opacity duration-300 ${isClosing ? 'opacity-0' : 'opacity-100'}`}
+        onClick={handleClose}
       />
 
       {/* Panel */}
-      <div className="fixed right-0 top-0 h-full w-full max-w-md bg-card border-l border-border shadow-2xl z-50 flex flex-col animate-slide-in-right overflow-hidden">
+      <div className={`fixed right-0 top-0 h-full w-full max-w-md bg-card border-l border-border shadow-2xl z-50 flex flex-col overflow-hidden ${
+        isClosing ? 'animate-slide-out-right' : 'animate-slide-in-right'
+      }`}>
         {/* Header */}
         <div className="flex-shrink-0 flex items-center justify-between p-4 border-b border-border">
           <div className="flex items-center gap-3">
@@ -158,7 +169,7 @@ export const NotificationCenter: React.FC = () => {
               <Settings className="w-5 h-5" />
             </button>
             <button
-              onClick={closeCenter}
+              onClick={handleClose}
               className="p-2 hover:bg-accent rounded-lg transition-colors"
             >
               <X className="w-5 h-5 text-muted-foreground" />

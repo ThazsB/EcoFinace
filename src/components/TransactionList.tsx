@@ -1,52 +1,43 @@
+/**
+ * Componente de Lista de Transações
+ * Refatorado com utilitários centralizados e skeleton loading
+ */
+
+import React, { memo } from 'react';
 import { Transaction } from '@/types';
 import { formatCurrency } from '@/utils/currency';
+import { getCategoryIcon, getCategoryColor } from '@/utils/categoryIcons';
+import { useCategoriesStore } from '@/stores/categoriesStore';
+import { TransactionListSkeleton } from './ui/Skeleton';
+import { Trash2, Edit2 } from 'lucide-react';
 
 interface TransactionListProps {
   transactions: Transaction[];
   onDelete?: (id: number) => void;
+  onEdit?: (transaction: Transaction) => void;
   showActions?: boolean;
+  loading?: boolean;
 }
 
-const ICONS: Record<string, string> = {
-  'Alimentação': '🍔', 'Restaurante': '🍽️', 'Mercado': '🛒', 'Feira': '🥦',
-  'Casa': '🏠', 'Moradia': '🏡', 'Aluguel': '🔑', 'Condomínio': 'building',
-  'Transporte': '🚗', 'Combustível': '⛽', 'Uber': '🚖', 'Ônibus': '🚌',
-  'Lazer': '🎉', 'Cinema': '🍿', 'Jogos': '🎮', 'Séries': '📺',
-  'Saúde': '💊', 'Farmácia': '🏥', 'Médico': '👨‍⚕', 'Academia': '💪',
-  'Educação': '📚', 'Curso': '🎓', 'Livros': '📖',
-  'Viagem': '✈️', 'Hotel': '🏨',
-  'Salário': '💰', 'Investimentos': '📈', 'Poupança': '🐷',
-  'Outros': '📦'
-};
-
-function getCategoryIcon(category: string): string {
-  const normalizedCategory = category.toLowerCase();
-  
-  // Try direct match
-  const directMatch = Object.keys(ICONS).find(key => 
-    key.toLowerCase() === normalizedCategory
-  );
-  if (directMatch) return ICONS[directMatch];
-
-  // Try keyword match
-  const keywordMatch = Object.keys(ICONS).find(key => 
-    normalizedCategory.includes(key.toLowerCase())
-  );
-  if (keywordMatch) return ICONS[keywordMatch];
-
-  // Fallback
-  return '📦';
-}
-
-export function TransactionList({
+export const TransactionList = memo(function TransactionList({
   transactions,
   onDelete,
+  onEdit,
   showActions = true,
+  loading = false,
 }: TransactionListProps) {
+  if (loading) {
+    return <TransactionListSkeleton count={5} />;
+  }
+
   if (transactions.length === 0) {
     return (
       <div className="text-center text-muted-foreground p-8">
-        <p>Nenhuma transação encontrada</p>
+        <div className="w-16 h-16 mx-auto mb-4 bg-muted rounded-full flex items-center justify-center">
+          <span className="text-3xl">💸</span>
+        </div>
+        <p className="text-lg font-medium">Nenhuma transação encontrada</p>
+        <p className="text-sm mt-1">Comece adicionando sua primeira transação</p>
       </div>
     );
   }
@@ -54,56 +45,163 @@ export function TransactionList({
   return (
     <div className="space-y-3">
       {transactions.map((tx) => (
-        <div
+        <TransactionItem
           key={tx.id}
-          className={`flex items-center justify-between p-4 rounded-lg border transition-colors ${
-            tx.type === 'income'
-              ? 'bg-green-500/10 border-green-500/20'
-              : 'bg-orange-500/10 border-orange-500/20'
-          }`}
-        >
-          <div className="flex items-center gap-4">
-            <div className="w-12 h-12 rounded-full bg-background flex items-center justify-center text-xl">
-              {getCategoryIcon(tx.category)}
-            </div>
-            
-            <div>
-              <p className="font-medium">{tx.desc}</p>
-              <p className="text-sm text-muted-foreground">
-                {tx.category} • {new Date(tx.date).toLocaleDateString('pt-BR')}
-              </p>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-4">
-            <p className={`font-bold ${tx.type === 'income' ? 'text-green-500' : 'text-orange-500'}`}>
-              {tx.type === 'income' ? '+' : '-'}{' '}{formatCurrency(tx.amount)}
-            </p>
-
-            {showActions && onDelete && (
-              <button
-                onClick={() => onDelete(tx.id)}
-                className="p-2 text-red-500 hover:bg-red-500/10 rounded-full transition-colors"
-                title="Excluir transação"
-              >
-                <svg
-                  className="w-5 h-5"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-                  />
-                </svg>
-              </button>
-            )}
-          </div>
-        </div>
+          transaction={tx}
+          onDelete={onDelete}
+          onEdit={onEdit}
+          showActions={showActions}
+        />
       ))}
     </div>
   );
+});
+
+// Componente individual de transação
+interface TransactionItemProps {
+  transaction: Transaction;
+  onDelete?: (id: number) => void;
+  onEdit?: (transaction: Transaction) => void;
+  showActions?: boolean;
 }
+
+const TransactionItem = memo(function TransactionItem({
+  transaction,
+  onDelete,
+  onEdit,
+  showActions,
+}: TransactionItemProps) {
+  const isIncome = transaction.type === 'income';
+  const IconComponent = getCategoryIcon(transaction.category);
+  const color = getCategoryColor(transaction.category);
+  const { categories: storeCategories } = useCategoriesStore();
+
+  // Obtém cor customizada da categoria se existir
+  const categoryFromStore = storeCategories.find(cat => cat.name === transaction.category);
+  const categoryColor = categoryFromStore?.color || color;
+
+  return (
+    <div
+      className={`flex items-center justify-between p-4 rounded-lg border transition-all hover:shadow-md ${
+        isIncome
+          ? 'bg-green-500/10 border-green-500/20'
+          : 'bg-orange-500/10 border-orange-500/20'
+      }`}
+    >
+      <div className="flex items-center gap-4">
+        <div
+          className="w-12 h-12 rounded-full flex items-center justify-center"
+          style={{ backgroundColor: `${categoryColor}20` }}
+        >
+          {IconComponent && <IconComponent size={24} style={{ color: categoryColor }} className="lucide-icon" />}
+        </div>
+
+        <div>
+          <p className="font-medium">{transaction.desc}</p>
+          <p className="text-sm text-muted-foreground flex items-center gap-2">
+            <span>{transaction.category}</span>
+            <span>•</span>
+            <span>
+              {(() => {
+                const date = new Date(transaction.date);
+                // Ajusta a data para fuso horário local para evitar deslocamento
+                date.setTime(date.getTime() + date.getTimezoneOffset() * 60000);
+                return date.toLocaleDateString('pt-BR');
+              })()}
+            </span>
+          </p>
+        </div>
+      </div>
+
+      <div className="flex items-center gap-4">
+        <p
+          className={`font-bold text-lg ${
+            isIncome ? 'text-green-500' : 'text-orange-500'
+          }`}
+        >
+          {isIncome ? '+' : '-'} {formatCurrency(transaction.amount)}
+        </p>
+
+        {showActions && (onDelete || onEdit) && (
+          <div className="flex gap-1">
+            {onEdit && (
+              <button
+                onClick={() => onEdit(transaction)}
+                className="p-2 hover:bg-white/10 rounded-full transition-colors text-muted-foreground hover:text-foreground"
+                title="Editar transação"
+                aria-label="Editar transação"
+              >
+                <Edit2 className="w-4 h-4" />
+              </button>
+            )}
+            {onDelete && (
+              <button
+                onClick={() => onDelete(transaction.id)}
+                className="p-2 hover:bg-red-500/10 rounded-full transition-colors text-muted-foreground hover:text-red-500"
+                title="Excluir transação"
+                aria-label="Excluir transação"
+              >
+                <Trash2 className="w-4 h-4" />
+              </button>
+            )}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+});
+
+// Versão resumida para uso em listas compactas
+export const TransactionListCompact = memo(function TransactionListCompact({
+  transactions,
+  maxItems = 3,
+}: {
+  transactions: Transaction[];
+  maxItems?: number;
+}) {
+  if (transactions.length === 0) {
+    return (
+      <p className="text-sm text-muted-foreground">
+        Nenhuma transação recente
+      </p>
+    );
+  }
+
+  const recentTransactions = transactions
+    .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+    .slice(0, maxItems);
+
+  return (
+    <div className="space-y-2">
+      {recentTransactions.map((tx) => {
+        const IconComponent = getCategoryIcon(tx.category);
+        const color = getCategoryColor(tx.category);
+        const { categories: storeCategories } = useCategoriesStore();
+        
+        // Obtém cor customizada da categoria se existir
+        const categoryFromStore = storeCategories.find(cat => cat.name === tx.category);
+        const categoryColor = categoryFromStore?.color || color;
+
+        return (
+          <div
+            key={tx.id}
+            className="flex items-center justify-between text-sm"
+          >
+            <div className="flex items-center gap-2">
+              {IconComponent && <IconComponent size={16} style={{ color: categoryColor }} className="lucide-icon" />}
+              <span className="text-muted-foreground">{tx.desc}</span>
+            </div>
+            <span
+              className={`font-medium ${
+                tx.type === 'income' ? 'text-green-500' : 'text-orange-500'
+              }`}
+            >
+              {tx.type === 'income' ? '+' : '-'}
+              {formatCurrency(tx.amount)}
+            </span>
+          </div>
+        );
+      })}
+    </div>
+  );
+});

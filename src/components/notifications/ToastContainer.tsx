@@ -17,6 +17,7 @@ import {
   RefreshCw,
   ArrowDownCircle,
   ArrowUpCircle,
+  Trash2,
 } from 'lucide-react';
 
 // Constantes de configuração
@@ -89,10 +90,16 @@ const getToastColors = (type: ToastType, transactionType?: TransactionType) => {
       progress: 'bg-yellow-500',
     },
     info: {
-      border: 'border-l-blue-500 bg-gradient-to-r from-blue-500/20 to-blue-:from-blue-500/10 dark:to-blue-500/5',
-      iconBg: 'bg-blue-500/5 dark100 dark:bg-blue-900/50',
+      border: 'border-l-blue-500 bg-gradient-to-r from-blue-500/20 to-blue-500/5 dark:from-blue-500/10 dark:to-blue-500/5',
+      iconBg: 'bg-blue-100 dark:bg-blue-900/50',
       iconColor: 'text-blue-600 dark:text-blue-400',
       progress: 'bg-blue-500',
+    },
+    delete: {
+      border: 'border-l-gray-500 bg-gradient-to-r from-gray-500/20 to-gray-500/5 dark:from-gray-500/10 dark:to-gray-500/5',
+      iconBg: 'bg-gray-100 dark:bg-gray-900/50',
+      iconColor: 'text-gray-600 dark:text-gray-400',
+      progress: 'bg-gray-500',
     },
   };
   
@@ -101,6 +108,11 @@ const getToastColors = (type: ToastType, transactionType?: TransactionType) => {
 
 // Obter ícone baseado no tipo
 const getToastIcon = (type: ToastType, transactionType?: string) => {
+  // Transações de exclusão têm ícone de lixeira
+  if (type === 'delete') {
+    return <Trash2 className="w-5 h-5" />;
+  }
+  
   // Transações têm ícones específicos
   if (transactionType === 'expense') {
     return <ArrowDownCircle className="w-5 h-5" />;
@@ -114,6 +126,7 @@ const getToastIcon = (type: ToastType, transactionType?: string) => {
     error: <AlertCircle className="w-5 h-5" />,
     warning: <AlertTriangle className="w-5 h-5" />,
     info: <Info className="w-5 h-5" />,
+    delete: <Trash2 className="w-5 h-5" />,
   };
   
   return icons[type] || icons.info;
@@ -419,27 +432,34 @@ export const notify = ({
   );
 };
 
+import { TOAST_MESSAGES, formatCurrencyForToast, getTransactionTypePortuguese } from '../../utils/toast-messages';
+
 // Hook useTransactionToast - hook especializado para notificações de transações
 export const useTransactionToast = () => {
   const showTransactionSuccess = useCallback(
     (data: { type: 'income' | 'expense'; action: 'add' | 'edit'; description: string; amount: number }) => {
       const { type: transactionType, action, description, amount } = data;
 
-      const actionText = {
-        add: 'adicionada',
-        edit: 'atualizada',
-      };
+      const transactionTypePT = getTransactionTypePortuguese(transactionType);
+      const formattedAmount = formatCurrencyForToast(amount);
 
-      const formattedAmount = new Intl.NumberFormat('pt-BR', {
-        style: 'currency',
-        currency: 'BRL',
-      }).format(Math.abs(amount));
+      let messageConfig;
+      switch (action) {
+        case 'add':
+          messageConfig = TOAST_MESSAGES.TRANSACTION.ADDED;
+          break;
+        case 'edit':
+          messageConfig = TOAST_MESSAGES.TRANSACTION.UPDATED;
+          break;
+        default:
+          messageConfig = TOAST_MESSAGES.TRANSACTION.ADDED;
+      }
 
       window.dispatchEvent(
         new CustomEvent('app-toast', {
           detail: {
-            title: 'Transação ' + actionText[action],
-            message: `${transactionType === 'expense' ? 'Despesa' : 'Receita'} "${description}" de ${formattedAmount} foi ${actionText[action]} com sucesso`,
+            title: messageConfig.TITLE,
+            message: messageConfig.MESSAGE(transactionTypePT, description, formattedAmount),
             type: transactionType === 'expense' ? 'warning' : 'success',
             duration: TOAST_DURATION,
             transactionType,
@@ -454,16 +474,15 @@ export const useTransactionToast = () => {
     (data: { type: 'income' | 'expense'; description: string; amount: number; error?: string; retryAction?: () => void }) => {
       const { type: transactionType, description, amount, error, retryAction } = data;
 
-      const formattedAmount = new Intl.NumberFormat('pt-BR', {
-        style: 'currency',
-        currency: 'BRL',
-      }).format(Math.abs(amount));
+      const transactionTypePT = getTransactionTypePortuguese(transactionType);
+      const formattedAmount = formatCurrencyForToast(amount);
+      const messageConfig = TOAST_MESSAGES.TRANSACTION.ERROR;
 
       window.dispatchEvent(
         new CustomEvent('app-toast', {
           detail: {
-            title: 'Erro ao processar transação',
-            message: error || `Não foi possível processar a ${transactionType === 'expense' ? 'despesa' : 'receita'} "${description}" de ${formattedAmount}`,
+            title: messageConfig.TITLE,
+            message: messageConfig.MESSAGE(transactionTypePT, description, formattedAmount, error),
             type: 'error',
             duration: TOAST_DURATION,
             retryAction,
@@ -478,17 +497,16 @@ export const useTransactionToast = () => {
     (data: { type: 'income' | 'expense'; description: string; amount: number }) => {
       const { type: transactionType, description, amount } = data;
 
-      const formattedAmount = new Intl.NumberFormat('pt-BR', {
-        style: 'currency',
-        currency: 'BRL',
-      }).format(Math.abs(amount));
+      const transactionTypePT = getTransactionTypePortuguese(transactionType);
+      const formattedAmount = formatCurrencyForToast(amount);
+      const messageConfig = TOAST_MESSAGES.TRANSACTION.DELETED;
 
       window.dispatchEvent(
         new CustomEvent('app-toast', {
           detail: {
-            title: 'Transação excluída',
-            message: `${transactionType === 'expense' ? 'Despesa' : 'Receita'} "${description}" de ${formattedAmount} foi excluída com sucesso`,
-            type: 'info',
+            title: messageConfig.TITLE,
+            message: messageConfig.MESSAGE(transactionTypePT, description, formattedAmount),
+            type: 'delete',
             duration: TOAST_DURATION,
             transactionType,
           },
@@ -506,16 +524,14 @@ export const useGoalToast = () => {
   const showGoalCreated = useCallback(
     (data: { name: string; target: number }) => {
       const { name, target } = data;
-      const formattedTarget = new Intl.NumberFormat('pt-BR', {
-        style: 'currency',
-        currency: 'BRL',
-      }).format(target);
+      const formattedTarget = formatCurrencyForToast(target);
+      const messageConfig = TOAST_MESSAGES.GOAL.CREATED;
 
       window.dispatchEvent(
         new CustomEvent('app-toast', {
           detail: {
-            title: 'Meta criada',
-            message: `Meta "${name}" de ${formattedTarget} foi criada com sucesso`,
+            title: messageConfig.TITLE,
+            message: messageConfig.MESSAGE(name, formattedTarget),
             type: 'success',
             duration: TOAST_DURATION,
           },
@@ -528,17 +544,15 @@ export const useGoalToast = () => {
   const showGoalContribution = useCallback(
     (data: { name: string; current: number; target: number }) => {
       const { name, current, target } = data;
-      const formattedCurrent = new Intl.NumberFormat('pt-BR', {
-        style: 'currency',
-        currency: 'BRL',
-      }).format(current);
+      const formattedCurrent = formatCurrencyForToast(current);
       const percentage = Math.round((current / target) * 100);
+      const messageConfig = TOAST_MESSAGES.GOAL.CONTRIBUTION;
 
       window.dispatchEvent(
         new CustomEvent('app-toast', {
           detail: {
-            title: 'Meta atualizada',
-            message: `Contribuição de ${formattedCurrent} adicionada à meta "${name}" (${percentage}% concluído)`,
+            title: messageConfig.TITLE,
+            message: messageConfig.MESSAGE(formattedCurrent, name, percentage),
             type: 'success',
             duration: TOAST_DURATION,
           },
@@ -551,12 +565,13 @@ export const useGoalToast = () => {
   const showGoalError = useCallback(
     (data: { name: string; error?: string; retryAction?: () => void }) => {
       const { name, error, retryAction } = data;
+      const messageConfig = TOAST_MESSAGES.GOAL.ERROR;
 
       window.dispatchEvent(
         new CustomEvent('app-toast', {
           detail: {
-            title: 'Erro ao processar meta',
-            message: error || `Não foi possível processar a meta "${name}"`,
+            title: messageConfig.TITLE,
+            message: messageConfig.MESSAGE(name, error),
             type: 'error',
             duration: TOAST_DURATION,
             retryAction,
@@ -570,13 +585,14 @@ export const useGoalToast = () => {
   const showGoalDelete = useCallback(
     (data: { name: string }) => {
       const { name } = data;
+      const messageConfig = TOAST_MESSAGES.GOAL.DELETED;
 
       window.dispatchEvent(
         new CustomEvent('app-toast', {
           detail: {
-            title: 'Meta excluída',
-            message: `Meta "${name}" foi excluída com sucesso`,
-            type: 'info',
+            title: messageConfig.TITLE,
+            message: messageConfig.MESSAGE(name),
+            type: 'delete',
             duration: TOAST_DURATION,
           },
         })
@@ -593,16 +609,14 @@ export const useBudgetToast = () => {
   const showBudgetCreated = useCallback(
     (data: { category: string; limit: number }) => {
       const { category, limit } = data;
-      const formattedLimit = new Intl.NumberFormat('pt-BR', {
-        style: 'currency',
-        currency: 'BRL',
-      }).format(limit);
+      const formattedLimit = formatCurrencyForToast(limit);
+      const messageConfig = TOAST_MESSAGES.BUDGET.CREATED;
 
       window.dispatchEvent(
         new CustomEvent('app-toast', {
           detail: {
-            title: 'Orçamento criado',
-            message: `Orçamento para "${category}" de ${formattedLimit} foi criado com sucesso`,
+            title: messageConfig.TITLE,
+            message: messageConfig.MESSAGE(category, formattedLimit),
             type: 'success',
             duration: TOAST_DURATION,
           },
@@ -615,12 +629,13 @@ export const useBudgetToast = () => {
   const showBudgetError = useCallback(
     (data: { category: string; error?: string; retryAction?: () => void }) => {
       const { category, error, retryAction } = data;
+      const messageConfig = TOAST_MESSAGES.BUDGET.ERROR;
 
       window.dispatchEvent(
         new CustomEvent('app-toast', {
           detail: {
-            title: 'Erro ao processar orçamento',
-            message: error || `Não foi possível processar o orçamento de "${category}"`,
+            title: messageConfig.TITLE,
+            message: messageConfig.MESSAGE(category, error),
             type: 'error',
             duration: TOAST_DURATION,
             retryAction,
@@ -634,13 +649,14 @@ export const useBudgetToast = () => {
   const showBudgetDelete = useCallback(
     (data: { category: string }) => {
       const { category } = data;
+      const messageConfig = TOAST_MESSAGES.BUDGET.DELETED;
 
       window.dispatchEvent(
         new CustomEvent('app-toast', {
           detail: {
-            title: 'Orçamento excluído',
-            message: `Orçamento para "${category}" foi excluído com sucesso`,
-            type: 'info',
+            title: messageConfig.TITLE,
+            message: messageConfig.MESSAGE(category),
+            type: 'delete',
             duration: TOAST_DURATION,
           },
         })

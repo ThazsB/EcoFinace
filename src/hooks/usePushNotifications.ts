@@ -155,8 +155,6 @@ export function usePushNotifications() {
 
     try {
       const notification = new Notification(title, {
-        icon: options?.icon || '/icons/notification-icon.png',
-        badge: '/icons/badge-icon.png',
         ...options,
       });
 
@@ -180,7 +178,7 @@ export function usePushNotifications() {
   ) => {
     // Disparar evento customizado que pode ser ouvido pelo componente Toast
     if (typeof window !== 'undefined') {
-      const event = new CustomEvent('app-notification', {
+      const event = new CustomEvent('app-toast', {
         detail: { title, message, type, timestamp: Date.now() }
       });
       window.dispatchEvent(event);
