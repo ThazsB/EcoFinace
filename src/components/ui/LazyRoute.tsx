@@ -11,11 +11,7 @@ interface LazyRouteProps {
  * Usa React.lazy + Suspense para code splitting
  */
 export function LazyRoute({ children, fallback }: LazyRouteProps) {
-  return (
-    <Suspense fallback={fallback || <LoadingScreen />}>
-      {children}
-    </Suspense>
-  );
+  return <Suspense fallback={fallback || <LoadingScreen />}>{children}</Suspense>;
 }
 
 /**
@@ -94,10 +90,7 @@ export function useDebounce<T>(value: T, delay: number): T {
 /**
  * Hook para throttle de callbacks
  */
-export function useThrottle<T extends (...args: any[]) => any>(
-  callback: T,
-  delay: number
-): T {
+export function useThrottle<T extends (...args: any[]) => any>(callback: T, delay: number): T {
   const lastRan = React.useRef<number>(0);
 
   return React.useCallback(

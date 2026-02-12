@@ -14,6 +14,7 @@ interface BudgetStatus {
   category: string;
   spent: number;
   limit: number;
+  percentage: number;
 }
 
 export default function Budgets() {
@@ -24,7 +25,9 @@ export default function Budgets() {
   const [hasInitialized, setHasInitialized] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
-  const [predictiveData, setPredictiveData] = useState<Array<{ category: string; projectedTotal: number; willExceed: boolean; daysRemaining: number }>>([]);
+  const [predictiveData, setPredictiveData] = useState<
+    Array<{ category: string; projectedTotal: number; willExceed: boolean; daysRemaining: number }>
+  >([]);
   const [newBudget, setNewBudget] = useState({
     category: '',
     limit: '',
@@ -62,6 +65,7 @@ export default function Budgets() {
         category: budget.category,
         spent: currentSpent,
         limit: budget.limit,
+        percentage: Math.round((currentSpent / budget.limit) * 100),
       };
     });
   }, [data.transactions, data.budgets]);
@@ -73,7 +77,7 @@ export default function Budgets() {
         setHasInitialized(true);
       }
     };
-    
+
     initialize();
   }, [user, init]);
 
@@ -86,19 +90,19 @@ export default function Budgets() {
         const txDate = new Date(tx.date);
         return txDate.getMonth() === now.getMonth() && txDate.getFullYear() === now.getFullYear();
       });
-      
+
       const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
       const daysRemaining = daysInMonth - now.getDate();
       const daysPassed = now.getDate();
-      
+
       const predictions = data.budgets.map((budget: Budget) => {
         const currentSpent = currentMonthTransactions
           .filter((tx: Transaction) => tx.type === 'expense' && tx.category === budget.category)
           .reduce((sum: number, tx: Transaction) => sum + tx.amount, 0);
-        
+
         const dailyAverage = daysPassed > 0 ? currentSpent / daysPassed : 0;
-        const projectedTotal = currentSpent + (dailyAverage * daysRemaining);
-        
+        const projectedTotal = currentSpent + dailyAverage * daysRemaining;
+
         return {
           category: budget.category,
           projectedTotal,
@@ -106,9 +110,9 @@ export default function Budgets() {
           daysRemaining,
         };
       });
-      
+
       setPredictiveData(predictions);
-      
+
       // Check for budget alerts
       checkBudgetAlerts(getBudgetStatuses());
     }
@@ -116,7 +120,7 @@ export default function Budgets() {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!newBudget.category) {
       alert('Por favor, selecione uma categoria');
       return;
@@ -138,20 +142,22 @@ export default function Budgets() {
     addBudget({
       category: newBudget.category,
       limit,
-    }).then(() => {
-      // Mostrar toast de sucesso
-      showBudgetCreated({ category: newBudget.category, limit });
-      
-      setNewBudget({
-        category: '',
-        limit: '',
-      });
+    })
+      .then(() => {
+        // Mostrar toast de sucesso
+        showBudgetCreated({ category: newBudget.category, limit });
 
-      setIsModalOpen(false);
-    }).catch((error) => {
-      showBudgetError({ category: newBudget.category });
-      console.error('Erro ao criar orçamento:', error);
-    });
+        setNewBudget({
+          category: '',
+          limit: '',
+        });
+
+        setIsModalOpen(false);
+      })
+      .catch((error) => {
+        showBudgetError({ category: newBudget.category });
+        console.error('Erro ao criar orçamento:', error);
+      });
   };
 
   const handleEdit = (budget: Budget) => {
@@ -164,7 +170,7 @@ export default function Budgets() {
 
   const handleEditSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     const limit = parseFloat(editBudget.limit);
     if (isNaN(limit) || limit <= 0) {
       alert('Por favor, digite um limite válido');
@@ -175,12 +181,14 @@ export default function Budgets() {
       ...editBudget,
       limit,
       profileId: localStorage.getItem('ecofinance_active_profile') || '',
-    }).then(() => {
-      setIsEditModalOpen(false);
-    }).catch((error) => {
-      showBudgetError({ category: editBudget.category });
-      console.error('Erro ao atualizar orçamento:', error);
-    });
+    })
+      .then(() => {
+        setIsEditModalOpen(false);
+      })
+      .catch((error) => {
+        showBudgetError({ category: editBudget.category });
+        console.error('Erro ao atualizar orçamento:', error);
+      });
   };
 
   // Open confirm dialog for deletion
@@ -198,11 +206,11 @@ export default function Budgets() {
   // Confirm deletion
   const handleConfirmDelete = () => {
     if (confirmDialog.budget) {
-      setConfirmDialog(prev => ({ ...prev, isDeleting: true }));
-      
+      setConfirmDialog((prev) => ({ ...prev, isDeleting: true }));
+
       showBudgetDelete({ category: confirmDialog.budget.category });
       deleteBudget(confirmDialog.budget.category);
-      
+
       setConfirmDialog({
         isOpen: false,
         budget: null,
@@ -228,13 +236,13 @@ export default function Budgets() {
       const txDate = new Date(tx.date);
       return txDate.getMonth() === now.getMonth() && txDate.getFullYear() === now.getFullYear();
     });
-    
+
     const currentSpent = currentMonthTransactions
       .filter((tx: Transaction) => tx.type === 'expense' && tx.category === budget.category)
       .reduce((sum: number, tx: Transaction) => sum + tx.amount, 0);
-    
+
     const percentUsed = Math.round((currentSpent / budget.limit) * 100);
-    
+
     return [
       {
         label: 'Categoria',
@@ -292,11 +300,21 @@ export default function Budgets() {
       </div>
 
       {/* Predictive Alerts Section */}
-      {predictiveData.some(p => p.willExceed) && (
+      {predictiveData.some((p) => p.willExceed) && (
         <div className="bg-amber-500/10 border border-amber-500/30 p-4 rounded-lg">
           <div className="flex items-center gap-2 mb-3">
-            <svg className="w-5 h-5 text-amber-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+            <svg
+              className="w-5 h-5 text-amber-500"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M13 10V3L4 14h7v7l9-11h-7z"
+              />
             </svg>
             <h3 className="font-semibold text-amber-500">Previsão de Estouro</h3>
           </div>
@@ -305,11 +323,14 @@ export default function Budgets() {
           </p>
           <div className="space-y-2">
             {predictiveData
-              .filter(p => p.willExceed)
-              .map(prediction => {
+              .filter((p) => p.willExceed)
+              .map((prediction) => {
                 const budget = data.budgets.find((b: Budget) => b.category === prediction.category);
                 return (
-                  <div key={prediction.category} className="flex items-center justify-between p-2 bg-card/50 rounded">
+                  <div
+                    key={prediction.category}
+                    className="flex items-center justify-between p-2 bg-card/50 rounded"
+                  >
                     <span className="text-sm font-medium">{prediction.category}</span>
                     <span className="text-sm text-red-400">
                       Projeção: {formatCurrency(prediction.projectedTotal)}
@@ -327,7 +348,7 @@ export default function Budgets() {
       {/* Budget List */}
       <div className="bg-card p-6 rounded-lg border border-border">
         <h2 className="text-lg font-semibold mb-4">Orçamentos</h2>
-        
+
         {data.budgets.length === 0 ? (
           <div className="text-center text-muted-foreground p-8">
             <p>Nenhum orçamento cadastrado</p>
@@ -346,7 +367,7 @@ export default function Budgets() {
                     Limite: {formatCurrency(budget.limit)}
                   </p>
                 </div>
-                
+
                 <div className="flex gap-2">
                   <button
                     onClick={() => handleEdit(budget)}
@@ -374,7 +395,7 @@ export default function Budgets() {
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
           <div className="bg-card rounded-lg border border-border w-full max-w-md p-6">
             <h2 className="text-xl font-bold mb-4">Novo Orçamento</h2>
-            
+
             <form onSubmit={handleSubmit} className="space-y-4">
               <div>
                 <label className="block text-sm font-medium mb-2">Categoria</label>
@@ -434,7 +455,7 @@ export default function Budgets() {
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
           <div className="bg-card rounded-lg border border-border w-full max-w-md p-6">
             <h2 className="text-xl font-bold mb-4">Editar Orçamento</h2>
-            
+
             <form onSubmit={handleEditSubmit} className="space-y-4">
               <div>
                 <label className="block text-sm font-medium mb-2">Categoria</label>

@@ -1,0 +1,42 @@
+est/* Estilos para garantir tamanho correto do container de toasts */
+
+.force-size {
+  width: 100%;
+  max-width: 24rem; /* 384px - tamanho padrão md:max-w-sm */
+}
+
+.force-size.md\:max-w-md {
+  max-width: 28rem; /* 448px - tamanho md:max-w-md */
+}
+
+/* Garantir que o container tenha o tamanho correto imediatamente */
+.force-size .toast-item {
+  width: 100%;
+  max-width: 24rem; /* 384px */
+}
+
+@media (min-width: 768px) {
+  .force-size {
+    max-width: 28rem; /* 448px - tamanho md:max-w-md */
+  }
+
+  .force-size .toast-item {
+    max-width: 28rem; /* 448px */
+  }
+}
+
+/* Animação para garantir tamanho correto */
+.force-size {
+  animation: ensureSize 0.1s ease-out;
+}
+
+@keyframes ensureSize {
+  from {
+    width: auto;
+    max-width: 16rem; /* 256px - tamanho menor */
+  }
+  to {
+    width: 100%;
+    max-width: 28rem; /* 448px - tamanho correto */
+  }
+}

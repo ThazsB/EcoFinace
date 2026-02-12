@@ -16,7 +16,7 @@ import {
   Sparkles,
   Eye,
   EyeOff,
-  AlertCircle
+  AlertCircle,
 } from 'lucide-react';
 
 interface FirstAccessScreenProps {
@@ -39,7 +39,7 @@ interface FormErrors {
 function ImageCropModal({
   imageSrc,
   onConfirm,
-  onCancel
+  onCancel,
 }: {
   imageSrc: string;
   onConfirm: (cropped: CroppedImage) => void;
@@ -67,7 +67,7 @@ function ImageCropModal({
     if (!isDragging) return;
     setPosition({
       x: e.clientX - dragStart.x,
-      y: e.clientY - dragStart.y
+      y: e.clientY - dragStart.y,
     });
   };
 
@@ -82,7 +82,7 @@ function ImageCropModal({
     if (!isDragging) return;
     setPosition({
       x: e.touches[0].clientX - dragStart.x,
-      y: e.touches[0].clientY - dragStart.y
+      y: e.touches[0].clientY - dragStart.y,
     });
   };
 
@@ -112,7 +112,7 @@ function ImageCropModal({
       const canvasAspect = size / size;
       let drawWidth = size;
       let drawHeight = size;
-      
+
       if (imgAspect > canvasAspect) {
         drawHeight = size / imgAspect;
       } else {
@@ -132,7 +132,7 @@ function ImageCropModal({
     onConfirm({
       dataUrl: canvas.toDataURL('image/png'),
       width: size,
-      height: size
+      height: size,
     });
   };
 
@@ -188,7 +188,7 @@ function ImageCropModal({
               transform: `scale(${zoom}) rotate(${rotation}deg)`,
               transformOrigin: 'center',
               marginLeft: position.x,
-              marginTop: position.y
+              marginTop: position.y,
             }}
           />
           <div className="absolute inset-0 pointer-events-none flex items-center justify-center">
@@ -252,13 +252,13 @@ function ImageCropModal({
 function PasswordStrength({ password }: { password: string }) {
   const getStrength = () => {
     if (!password) return { score: 0, label: '', color: '' };
-    
+
     let score = 0;
     if (password.length >= 8) score++;
     if (/[A-Z]/.test(password)) score++;
     if (/[0-9]/.test(password)) score++;
     if (/[^A-Za-z0-9]/.test(password)) score++;
-    
+
     const levels = [
       { score: 0, label: '', color: '' },
       { score: 1, label: 'Fraca', color: 'bg-red-500' },
@@ -266,7 +266,7 @@ function PasswordStrength({ password }: { password: string }) {
       { score: 3, label: 'Boa', color: 'bg-blue-500' },
       { score: 4, label: 'Forte', color: 'bg-primary' },
     ];
-    
+
     return levels[score];
   };
 
@@ -285,10 +285,15 @@ function PasswordStrength({ password }: { password: string }) {
         ))}
       </div>
       {password && (
-        <p className={`text-xs font-medium ${
-          strength.score >= 3 ? 'text-primary' : 
-          strength.score >= 2 ? 'text-yellow-400' : 'text-red-400'
-        }`}>
+        <p
+          className={`text-xs font-medium ${
+            strength.score >= 3
+              ? 'text-primary'
+              : strength.score >= 2
+                ? 'text-yellow-400'
+                : 'text-red-400'
+          }`}
+        >
           {strength.label}
         </p>
       )}
@@ -380,7 +385,7 @@ export function FirstAccessScreen({ onBack, onSuccess }: FirstAccessScreenProps)
         return;
       }
       const mediaStream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: 'user' }
+        video: { facingMode: 'user' },
       });
       setStream(mediaStream);
       setShowCamera(true);
@@ -407,7 +412,7 @@ export function FirstAccessScreen({ onBack, onSuccess }: FirstAccessScreenProps)
 
   const handleCameraClose = () => {
     if (stream) {
-      stream.getTracks().forEach(track => track.stop());
+      stream.getTracks().forEach((track) => track.stop());
       setStream(null);
     }
     setShowCamera(false);
@@ -444,7 +449,7 @@ export function FirstAccessScreen({ onBack, onSuccess }: FirstAccessScreenProps)
         </div>
         {/* Overlay suave */}
         <div className="absolute inset-0 bg-gradient-to-t from-neutral-950/60 via-transparent to-neutral-950/30" />
-        
+
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
@@ -453,7 +458,8 @@ export function FirstAccessScreen({ onBack, onSuccess }: FirstAccessScreenProps)
         >
           <div className="space-y-2">
             <h2 className="text-2xl xl:text-4xl font-bold text-white leading-tight">
-              Comece sua jornada<br />
+              Comece sua jornada
+              <br />
               <span className="text-primary">financeira inteligente</span>
             </h2>
             <p className="text-neutral-300 text-sm xl:text-lg max-w-md mx-auto">
@@ -482,7 +488,7 @@ export function FirstAccessScreen({ onBack, onSuccess }: FirstAccessScreenProps)
           transition={{ duration: 0.4, ease: 'easeOut', delay: 0.1 }}
           className="relative z-10 text-xs xl:text-sm text-neutral-400 mt-6"
         >
-           Sua educação financeira em primeiro lugar.
+          Sua educação financeira em primeiro lugar.
         </motion.div>
       </div>
 
@@ -496,11 +502,9 @@ export function FirstAccessScreen({ onBack, onSuccess }: FirstAccessScreenProps)
         {/* Overlay suave */}
         <div className="absolute inset-0 bg-gradient-to-t from-neutral-950/60 via-transparent to-neutral-950/30" />
         <div className="absolute inset-0 bg-gradient-to-l from-neutral-800/20 via-transparent to-neutral-900/10" />
-        
+
         <div className="relative z-10 flex-1 flex flex-col items-center justify-center p-4 sm:p-5 lg:p-6 w-full max-w-lg overflow-hidden">
-          <div
-            className="w-full flex flex-col items-center"
-          >
+          <div className="w-full flex flex-col items-center">
             <button
               onClick={onBack}
               className="flex items-center gap-2 text-base text-neutral-400 hover:text-white mb-4 transition-colors group self-start"
@@ -509,282 +513,269 @@ export function FirstAccessScreen({ onBack, onSuccess }: FirstAccessScreenProps)
               Voltar
             </button>
 
-            <div
-              className="mb-4"
-            >
+            <div className="mb-4">
               <h1 className="text-2xl font-bold text-white mb-1">Crie sua conta</h1>
               <p className="text-neutral-400 text-base">Preencha os dados abaixo para começar</p>
             </div>
 
-            <div
-              className="bg-neutral-900/50 backdrop-blur-sm rounded-2xl border border-neutral-800/50 p-5 space-y-4 overflow-hidden w-full"
-            >
-            <div className="flex items-center justify-center gap-4">
-              <div
-                className="relative"
-              >
-                <div className="w-20 h-20 rounded-full bg-gradient-to-br from-primary/20 to-primary/10 border-2 border-primary/30 overflow-hidden flex items-center justify-center">
-                  {formData.customPhoto ? (
-                    <img
-                      src={formData.customPhoto}
-                      alt="Foto de perfil"
-                      className="w-full h-full object-cover"
-                    />
-                  ) : formData.avatar ? (
-                    <span className="text-3xl">{formData.avatar}</span>
-                  ) : (
-                    <UserPlus className="w-8 h-8 text-primary/50" />
-                  )}
-                </div>
+            <div className="bg-neutral-900/50 backdrop-blur-sm rounded-2xl border border-neutral-800/50 p-5 space-y-4 overflow-hidden w-full">
+              <div className="flex items-center justify-center gap-4">
+                <div className="relative">
+                  <div className="w-20 h-20 rounded-full bg-gradient-to-br from-primary/20 to-primary/10 border-2 border-primary/30 overflow-hidden flex items-center justify-center">
+                    {formData.customPhoto ? (
+                      <img
+                        src={formData.customPhoto}
+                        alt="Foto de perfil"
+                        className="w-full h-full object-cover"
+                      />
+                    ) : formData.avatar ? (
+                      <span className="text-3xl">{formData.avatar}</span>
+                    ) : (
+                      <UserPlus className="w-8 h-8 text-primary/50" />
+                    )}
+                  </div>
 
-                <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 flex gap-1">
-                  <motion.button
-                    whileHover={{ scale: 1.1 }}
-                    whileTap={{ scale: 0.9 }}
-                    onClick={() => fileInputRef.current?.click()}
-                    className="p-1.5 bg-primary text-white rounded-full hover:bg-primary/90 transition-colors shadow-lg"
-                    title="Upload"
-                  >
-                    <Upload className="w-4 h-4" />
-                  </motion.button>
-                  <motion.button
-                    whileHover={{ scale: 1.1 }}
-                    whileTap={{ scale: 0.9 }}
-                    onClick={startCamera}
-                    className="p-1.5 bg-primary text-white rounded-full hover:bg-primary/90 transition-colors shadow-lg"
-                    title="Câmera"
-                  >
-                    <Camera className="w-4 h-4" />
-                  </motion.button>
-                  {formData.customPhoto && (
+                  <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 flex gap-1">
                     <motion.button
                       whileHover={{ scale: 1.1 }}
                       whileTap={{ scale: 0.9 }}
-                      onClick={handleRemovePhoto}
-                      className="p-1.5 bg-red-500 text-white rounded-full hover:bg-red-600 transition-colors shadow-lg"
-                      title="Remover"
+                      onClick={() => fileInputRef.current?.click()}
+                      className="p-1.5 bg-primary text-white rounded-full hover:bg-primary/90 transition-colors shadow-lg"
+                      title="Upload"
                     >
-                      <X className="w-4 h-4" />
+                      <Upload className="w-4 h-4" />
                     </motion.button>
+                    <motion.button
+                      whileHover={{ scale: 1.1 }}
+                      whileTap={{ scale: 0.9 }}
+                      onClick={startCamera}
+                      className="p-1.5 bg-primary text-white rounded-full hover:bg-primary/90 transition-colors shadow-lg"
+                      title="Câmera"
+                    >
+                      <Camera className="w-4 h-4" />
+                    </motion.button>
+                    {formData.customPhoto && (
+                      <motion.button
+                        whileHover={{ scale: 1.1 }}
+                        whileTap={{ scale: 0.9 }}
+                        onClick={handleRemovePhoto}
+                        className="p-1.5 bg-red-500 text-white rounded-full hover:bg-red-600 transition-colors shadow-lg"
+                        title="Remover"
+                      >
+                        <X className="w-4 h-4" />
+                      </motion.button>
+                    )}
+                  </div>
+
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/*"
+                    onChange={handleFileSelect}
+                    className="hidden"
+                  />
+                </div>
+
+                <div className="flex-1">
+                  <h3 className="text-white font-medium text-base mb-1">Foto de perfil</h3>
+                  <p className="text-sm text-neutral-400">Upload, câmera ou avatar</p>
+                  <div className="flex flex-wrap gap-1.5 mt-2">
+                    {AVAILABLE_COLORS.slice(0, 6).map((color) => (
+                      <button
+                        key={color.value}
+                        type="button"
+                        onClick={() => setFormData({ ...formData, color: color.value })}
+                        className={`w-6 h-6 rounded-full transition-all ${
+                          formData.color === color.value
+                            ? 'ring-2 ring-offset-2 ring-offset-neutral-900 ring-primary scale-110'
+                            : 'hover:scale-105'
+                        }`}
+                        style={{ backgroundColor: color.value }}
+                      />
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              <AnimatePresence>
+                {!formData.customPhoto && (
+                  <motion.div
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: 'auto' }}
+                    exit={{ opacity: 0, height: 0 }}
+                    className="overflow-hidden"
+                  >
+                    <label className="block text-sm font-medium text-neutral-400 mb-2">
+                      Ou escolha um avatar
+                    </label>
+                    <div className="grid grid-cols-8 gap-2">
+                      {AVAILABLE_AVATARS.slice(0, 16).map((avatar) => (
+                        <button
+                          key={avatar}
+                          type="button"
+                          onClick={() => setFormData({ ...formData, avatar })}
+                          className={`aspect-square rounded-lg flex items-center justify-center text-xl transition-all ${
+                            formData.avatar === avatar
+                              ? 'bg-primary text-white'
+                              : 'bg-neutral-800 hover:bg-neutral-700'
+                          }`}
+                        >
+                          {avatar}
+                        </button>
+                      ))}
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+
+              <form onSubmit={handleSubmit} className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-neutral-300 mb-1.5">
+                    Nome completo
+                  </label>
+                  <div className="relative">
+                    <UserPlus className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-neutral-500" />
+                    <input
+                      type="text"
+                      value={formData.name}
+                      onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                      className={`w-full pl-10 pr-4 py-2.5 bg-neutral-800/50 rounded-lg outline-none transition-all text-base text-white placeholder:text-neutral-500 ${errors.name ? 'border border-red-500' : 'focus:border-primary/50'}`}
+                      placeholder="Seu nome completo"
+                    />
+                  </div>
+                  {errors.name && (
+                    <p className="text-red-400 text-sm mt-1 flex items-center gap-1">
+                      <AlertCircle className="w-4 h-4" />
+                      {errors.name}
+                    </p>
                   )}
                 </div>
 
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept="image/*"
-                  onChange={handleFileSelect}
-                  className="hidden"
-                />
-              </div>
-
-              <div className="flex-1">
-                <h3 className="text-white font-medium text-base mb-1">Foto de perfil</h3>
-                <p className="text-sm text-neutral-400">Upload, câmera ou avatar</p>
-                <div className="flex flex-wrap gap-1.5 mt-2">
-                  {AVAILABLE_COLORS.slice(0, 6).map((color) => (
-                    <button
-                      key={color.value}
-                      type="button"
-                      onClick={() => setFormData({ ...formData, color: color.value })}
-                      className={`w-6 h-6 rounded-full transition-all ${
-                        formData.color === color.value
-                          ? 'ring-2 ring-offset-2 ring-offset-neutral-900 ring-primary scale-110'
-                          : 'hover:scale-105'
-                      }`}
-                      style={{ backgroundColor: color.value }}
+                <div>
+                  <label className="block text-sm font-medium text-neutral-300 mb-1.5">Senha</label>
+                  <div className="relative">
+                    <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-neutral-500" />
+                    <input
+                      type={showPassword ? 'text' : 'password'}
+                      value={formData.password}
+                      onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                      className={`w-full pl-10 pr-10 py-2.5 bg-neutral-800/50 rounded-lg outline-none transition-all text-base text-white placeholder:text-neutral-500 ${errors.password ? 'border border-red-500' : 'focus:border-primary/50'}`}
+                      placeholder="Mínimo 6 caracteres"
                     />
-                  ))}
-                </div>
-              </div>
-            </div>
-
-            <AnimatePresence>
-              {!formData.customPhoto && (
-                <motion.div
-                  initial={{ opacity: 0, height: 0 }}
-                  animate={{ opacity: 1, height: 'auto' }}
-                  exit={{ opacity: 0, height: 0 }}
-                  className="overflow-hidden"
-                >
-                  <label className="block text-sm font-medium text-neutral-400 mb-2">
-                    Ou escolha um avatar
-                  </label>
-                  <div className="grid grid-cols-8 gap-2">
-                    {AVAILABLE_AVATARS.slice(0, 16).map((avatar) => (
-                      <button
-                        key={avatar}
-                        type="button"
-                        onClick={() => setFormData({ ...formData, avatar })}
-                        className={`aspect-square rounded-lg flex items-center justify-center text-xl transition-all ${
-                          formData.avatar === avatar
-                            ? 'bg-primary text-white'
-                            : 'bg-neutral-800 hover:bg-neutral-700'
-                        }`}
-                      >
-                        {avatar}
-                      </button>
-                    ))}
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-500 hover:text-neutral-300"
+                    >
+                      {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                    </button>
                   </div>
-                </motion.div>
-              )}
-            </AnimatePresence>
-
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-neutral-300 mb-1.5">
-                  Nome completo
-                </label>
-                <div className="relative">
-                  <UserPlus className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-neutral-500" />
-                  <input
-                    type="text"
-                    value={formData.name}
-                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                    className={`w-full pl-10 pr-4 py-2.5 bg-neutral-800/50 rounded-lg outline-none transition-all text-base text-white placeholder:text-neutral-500 ${errors.name ? 'border border-red-500' : 'focus:border-primary/50'}`}
-                    placeholder="Seu nome completo"
-                  />
+                  <PasswordStrength password={formData.password} />
+                  {errors.password && (
+                    <p className="text-red-400 text-sm mt-1 flex items-center gap-1">
+                      <AlertCircle className="w-4 h-4" />
+                      {errors.password}
+                    </p>
+                  )}
                 </div>
-                {errors.name && (
-                  <p className="text-red-400 text-sm mt-1 flex items-center gap-1">
-                    <AlertCircle className="w-4 h-4" />
-                    {errors.name}
-                  </p>
-                )}
-              </div>
 
-              <div>
-                <label className="block text-sm font-medium text-neutral-300 mb-1.5">
-                  Senha
-                </label>
-                <div className="relative">
-                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-neutral-500" />
-                  <input
-                    type={showPassword ? 'text' : 'password'}
-                    value={formData.password}
-                    onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                    className={`w-full pl-10 pr-10 py-2.5 bg-neutral-800/50 rounded-lg outline-none transition-all text-base text-white placeholder:text-neutral-500 ${errors.password ? 'border border-red-500' : 'focus:border-primary/50'}`}
-                    placeholder="Mínimo 6 caracteres"
-                  />
+                <div>
+                  <label className="block text-sm font-medium text-neutral-300 mb-1.5">
+                    Confirmar senha
+                  </label>
+                  <div className="relative">
+                    <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-neutral-500" />
+                    <input
+                      type={showPassword ? 'text' : 'password'}
+                      value={formData.confirmPassword}
+                      onChange={(e) =>
+                        setFormData({ ...formData, confirmPassword: e.target.value })
+                      }
+                      className={`w-full pl-10 pr-4 py-2.5 bg-neutral-800/50 rounded-lg outline-none transition-all text-base text-white placeholder:text-neutral-500 ${errors.confirmPassword ? 'border border-red-500' : 'focus:border-primary/50'}`}
+                      placeholder="Digite a senha novamente"
+                    />
+                  </div>
+                  {errors.confirmPassword && (
+                    <p className="text-red-400 text-sm mt-1 flex items-center gap-1">
+                      <AlertCircle className="w-4 h-4" />
+                      {errors.confirmPassword}
+                    </p>
+                  )}
+                </div>
+
+                <div className="flex gap-3 pt-2">
                   <button
                     type="button"
-                    onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-500 hover:text-neutral-300"
+                    onClick={onBack}
+                    className="flex-1 px-4 py-3 bg-neutral-800 text-neutral-300 rounded-lg hover:bg-neutral-700 transition-colors text-sm font-medium"
                   >
-                    {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                    Cancelar
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={loading}
+                    className="flex-1 px-4 py-3 bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors text-sm font-medium flex items-center justify-center gap-2 shadow-lg shadow-primary/25"
+                  >
+                    {loading ? (
+                      <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                    ) : (
+                      <>
+                        <Sparkles className="w-4 h-4" />
+                        Criar Conta
+                      </>
+                    )}
                   </button>
                 </div>
-                <PasswordStrength password={formData.password} />
-                {errors.password && (
-                  <p className="text-red-400 text-sm mt-1 flex items-center gap-1">
-                    <AlertCircle className="w-4 h-4" />
-                    {errors.password}
-                  </p>
-                )}
-              </div>
+              </form>
+            </div>
 
-              <div>
-                <label className="block text-sm font-medium text-neutral-300 mb-1.5">
-                  Confirmar senha
-                </label>
-                <div className="relative">
-                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-neutral-500" />
-                  <input
-                    type={showPassword ? 'text' : 'password'}
-                    value={formData.confirmPassword}
-                    onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })}
-                    className={`w-full pl-10 pr-4 py-2.5 bg-neutral-800/50 rounded-lg outline-none transition-all text-base text-white placeholder:text-neutral-500 ${errors.confirmPassword ? 'border border-red-500' : 'focus:border-primary/50'}`}
-                    placeholder="Digite a senha novamente"
-                  />
-                </div>
-                {errors.confirmPassword && (
-                  <p className="text-red-400 text-sm mt-1 flex items-center gap-1">
-                    <AlertCircle className="w-4 h-4" />
-                    {errors.confirmPassword}
-                  </p>
-                )}
-              </div>
+            <p className="text-center text-sm text-neutral-500 mt-4">
+              Ao criar sua conta, você concorda com nossos termos de uso
+            </p>
+          </div>
+        </div>
 
-              <div className="flex gap-3 pt-2">
+        <AnimatePresence>
+          {showCropModal && cropImageSrc && (
+            <ImageCropModal
+              imageSrc={cropImageSrc}
+              onConfirm={handleCropConfirm}
+              onCancel={() => {
+                setShowCropModal(false);
+                setCropImageSrc(null);
+              }}
+            />
+          )}
+        </AnimatePresence>
+
+        <AnimatePresence>
+          {showCamera && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 bg-black/90 z-50 flex flex-col items-center justify-center p-4"
+            >
+              <video ref={videoRef} autoPlay playsInline className="rounded-lg max-w-sm" />
+              <div className="flex gap-3 mt-4">
                 <button
-                  type="button"
-                  onClick={onBack}
-                  className="flex-1 px-4 py-3 bg-neutral-800 text-neutral-300 rounded-lg hover:bg-neutral-700 transition-colors text-sm font-medium"
+                  onClick={handleCameraClose}
+                  className="px-4 py-2 bg-neutral-800 text-neutral-300 rounded-lg text-sm font-medium hover:bg-neutral-700 transition-colors"
                 >
                   Cancelar
                 </button>
                 <button
-                  type="submit"
-                  disabled={loading}
-                  className="flex-1 px-4 py-3 bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors text-sm font-medium flex items-center justify-center gap-2 shadow-lg shadow-primary/25"
+                  onClick={handleCameraSnapshot}
+                  className="px-4 py-2 bg-primary text-white rounded-lg text-sm font-medium hover:bg-primary/90 transition-colors flex items-center gap-1.5"
                 >
-                  {loading ? (
-                    <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                  ) : (
-                    <>
-                      <Sparkles className="w-4 h-4" />
-                      Criar Conta
-                    </>
-                  )}
+                  <Camera className="w-4 h-4" />
+                  Capturar
                 </button>
               </div>
-            </form>
-          </div>
-
-          <p
-            className="text-center text-sm text-neutral-500 mt-4"
-          >
-            Ao criar sua conta, você concorda com nossos termos de uso
-          </p>
-        </div>
-      </div>
-
-      <AnimatePresence>
-        {showCropModal && cropImageSrc && (
-          <ImageCropModal
-            imageSrc={cropImageSrc}
-            onConfirm={handleCropConfirm}
-            onCancel={() => {
-              setShowCropModal(false);
-              setCropImageSrc(null);
-            }}
-          />
-        )}
-      </AnimatePresence>
-
-      <AnimatePresence>
-        {showCamera && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black/90 z-50 flex flex-col items-center justify-center p-4"
-          >
-            <video
-              ref={videoRef}
-              autoPlay
-              playsInline
-              className="rounded-lg max-w-sm"
-            />
-            <div className="flex gap-3 mt-4">
-              <button
-                onClick={handleCameraClose}
-                className="px-4 py-2 bg-neutral-800 text-neutral-300 rounded-lg text-sm font-medium hover:bg-neutral-700 transition-colors"
-              >
-                Cancelar
-              </button>
-              <button
-                onClick={handleCameraSnapshot}
-                className="px-4 py-2 bg-primary text-white rounded-lg text-sm font-medium hover:bg-primary/90 transition-colors flex items-center gap-1.5"
-              >
-                <Camera className="w-4 h-4" />
-                Capturar
-              </button>
-            </div>
-            <canvas ref={canvasRef} className="hidden" />
-          </motion.div>
-        )}
-      </AnimatePresence>
+              <canvas ref={canvasRef} className="hidden" />
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
     </div>
   );

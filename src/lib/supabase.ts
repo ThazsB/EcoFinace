@@ -1,6 +1,6 @@
 /**
  * Cliente Supabase para sincronização de notificações
- * 
+ *
  * Configuração e utilitários para integração com Supabase
  * Supabase oferece generous free tier com realtime subscriptions
  */
@@ -62,7 +62,7 @@ export class SupabaseNotificationClient {
    */
   private generateDeviceId(): string {
     if (typeof window === 'undefined') return 'server';
-    
+
     let deviceId = localStorage.getItem('ecofinance_device_id');
     if (!deviceId) {
       deviceId = `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
@@ -76,10 +76,10 @@ export class SupabaseNotificationClient {
    */
   async initialize(profileId: string): Promise<void> {
     this.profileId = profileId;
-    
+
     // Registrar sessão do dispositivo
     await this.registerDeviceSession();
-    
+
     // Configurar Realtime subscription
     await this.setupRealtimeSubscription();
   }
@@ -91,12 +91,11 @@ export class SupabaseNotificationClient {
     if (!this.profileId) return;
 
     const deviceInfo = this.getDeviceInfo();
-    
+
     try {
       // Tentar inserir ou atualizar sessão
-      const { error } = await this.client
-        .from('device_sessions')
-        .upsert({
+      const { error } = await this.client.from('device_sessions').upsert(
+        {
           profile_id: this.profileId,
           device_id: this.deviceId,
           device_name: deviceInfo.name,
@@ -104,10 +103,12 @@ export class SupabaseNotificationClient {
           last_active: new Date().toISOString(),
           is_current: true,
           updated_at: new Date().toISOString(),
-        }, {
+        },
+        {
           onConflict: 'profile_id, device_id',
           ignoreDuplicates: false,
-        });
+        }
+      );
 
       if (error) {
         console.warn('Supabase: Erro ao registrar sessão do dispositivo:', error);
@@ -122,7 +123,7 @@ export class SupabaseNotificationClient {
    */
   private getDeviceInfo(): { name: string; type: 'desktop' | 'mobile' | 'tablet' } {
     const ua = typeof navigator !== 'undefined' ? navigator.userAgent : '';
-    
+
     let type: 'desktop' | 'mobile' | 'tablet' = 'desktop';
     let name = 'Dispositivo Desconhecido';
 
@@ -184,17 +185,17 @@ export class SupabaseNotificationClient {
    */
   private handleRealtimeEvent(payload: any): void {
     const { eventType, new: newRecord, old: oldRecord } = payload;
-    
+
     // Notificar callbacks registrados
     const callbacks = this.syncCallbacks.get(eventType);
     if (callbacks) {
-      callbacks.forEach(callback => callback({ new: newRecord, old: oldRecord }));
+      callbacks.forEach((callback) => callback({ new: newRecord, old: oldRecord }));
     }
 
     // Callback geral para todos os eventos
     const allCallbacks = this.syncCallbacks.get('*');
     if (allCallbacks) {
-      allCallbacks.forEach(callback => callback(payload));
+      allCallbacks.forEach((callback) => callback(payload));
     }
   }
 
@@ -220,24 +221,22 @@ export class SupabaseNotificationClient {
     if (!this.profileId) return;
 
     try {
-      const { error } = await this.client
-        .from('notifications')
-        .insert({
-          id: `${notification.id}`,
-          profile_id: this.profileId,
-          title: notification.title,
-          message: notification.message,
-          type: notification.type,
-          category: notification.category,
-          priority: notification.priority || 'normal',
-          date: notification.date,
-          read: notification.read,
-          archived: notification.archived || false,
-          snoozed_until: notification.snoozedUntil || null,
-          device_id: this.deviceId,
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
-        });
+      const { error } = await this.client.from('notifications').insert({
+        id: `${notification.id}`,
+        profile_id: this.profileId,
+        title: notification.title,
+        message: notification.message,
+        type: notification.type,
+        category: notification.category,
+        priority: notification.priority || 'normal',
+        date: notification.date,
+        read: notification.read,
+        archived: notification.archived || false,
+        snoozed_until: notification.snoozedUntil || null,
+        device_id: this.deviceId,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      });
 
       if (error) {
         console.warn('Supabase: Erro ao enviar notificação:', error);
@@ -288,7 +287,7 @@ export class SupabaseNotificationClient {
 
       // Mesclar notificações locais e remotas
       const merged = this.mergeNotifications(localNotifications, remoteFormatted);
-      
+
       return merged;
     } catch (err) {
       console.warn('Supabase: Falha na sincronização:', err);
@@ -303,12 +302,12 @@ export class SupabaseNotificationClient {
     const notificationMap = new Map<number, Notification>();
 
     // Adicionar notificações locais
-    local.forEach(n => {
+    local.forEach((n) => {
       notificationMap.set(n.id, n);
     });
 
     // Processar notificações remotas
-    remote.forEach(r => {
+    remote.forEach((r) => {
       const existing = notificationMap.get(r.id);
 
       if (!existing) {
@@ -329,7 +328,7 @@ export class SupabaseNotificationClient {
 
     // Converter para array e limitar
     const merged = Array.from(notificationMap.values());
-    
+
     // Ordenar por data (mais recentes primeiro)
     merged.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
@@ -346,7 +345,7 @@ export class SupabaseNotificationClient {
     try {
       const { error } = await this.client
         .from('notifications')
-        .update({ 
+        .update({
           read: true,
           updated_at: new Date().toISOString(),
         })
@@ -390,7 +389,7 @@ export class SupabaseNotificationClient {
 
     try {
       // Preparar registros para inserção em lote
-      const records = notifications.map(n => ({
+      const records = notifications.map((n) => ({
         id: `${n.id}`,
         profile_id: this.profileId,
         title: n.title,
@@ -408,12 +407,10 @@ export class SupabaseNotificationClient {
       }));
 
       // Upsert em lotes (máximo 1000 por operação)
-      const { error } = await this.client
-        .from('notifications')
-        .upsert(records, {
-          onConflict: 'id, profile_id',
-          ignoreDuplicates: false,
-        });
+      const { error } = await this.client.from('notifications').upsert(records, {
+        onConflict: 'id, profile_id',
+        ignoreDuplicates: false,
+      });
 
       if (error) {
         console.warn('Supabase: Erro no backup:', error);
@@ -516,7 +513,7 @@ export class SupabaseNotificationClient {
       await this.client.channel(`notifications:${this.profileId}`).unsubscribe();
       this.realtimeChannel = null;
     }
-    
+
     this.syncCallbacks.clear();
     this.profileId = null;
   }

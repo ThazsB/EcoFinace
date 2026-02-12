@@ -26,32 +26,34 @@ export function exportToCSV<T extends Record<string, unknown>>(
   // Obter cabeçalhos
   const keys = Object.keys(data[0]);
   const headers = options?.headers || {};
-  
+
   // Formatar cabeçalhos
   const headerRow = keys.map((key) => headers[key] || key).join(',');
-  
+
   // Formatar linhas
   const rows = data.map((row) =>
-    keys.map((key) => {
-      const value = row[key];
-      
-      // Tratar datas
-      if (options?.dateFields?.includes(key) && value) {
-        return formatDate(value as string);
-      }
-      
-      // Tratar objetos
-      if (typeof value === 'object' && value !== null) {
-        return JSON.stringify(value);
-      }
-      
-      // Tratar strings com vírgulas
-      if (typeof value === 'string' && value.includes(',')) {
-        return `"${value}"`;
-      }
-      
-      return String(value ?? '');
-    }).join(',')
+    keys
+      .map((key) => {
+        const value = row[key];
+
+        // Tratar datas
+        if (options?.dateFields?.includes(key) && value) {
+          return formatDate(value as string);
+        }
+
+        // Tratar objetos
+        if (typeof value === 'object' && value !== null) {
+          return JSON.stringify(value);
+        }
+
+        // Tratar strings com vírgulas
+        if (typeof value === 'string' && value.includes(',')) {
+          return `"${value}"`;
+        }
+
+        return String(value ?? '');
+      })
+      .join(',')
   );
 
   const csv = [headerRow, ...rows].join('\n');
@@ -83,10 +85,7 @@ export function exportTransactions(
 /**
  * Exporta orçamentos para CSV
  */
-export function exportBudgets(
-  budgets: Budget[],
-  filename: string = 'orcamentos'
-): void {
+export function exportBudgets(budgets: Budget[], filename: string = 'orcamentos'): void {
   const data = budgets.map((budget) => ({
     categoria: budget.category,
     limite: budget.limit,
@@ -99,10 +98,7 @@ export function exportBudgets(
 /**
  * Exporta metas para CSV
  */
-export function exportGoals(
-  goals: Goal[],
-  filename: string = 'metas'
-): void {
+export function exportGoals(goals: Goal[], filename: string = 'metas'): void {
   const data = goals.map((goal) => ({
     id: goal.id,
     nome: goal.name,
@@ -127,7 +123,7 @@ export function exportAllData(
   profileName: string
 ): void {
   const timestamp = new Date().toISOString().split('T')[0];
-  
+
   exportTransactions(data.transactions, `transacoes_${profileName}_${timestamp}`);
   exportBudgets(data.budgets, `orcamentos_${profileName}_${timestamp}`);
   exportGoals(data.goals, `metas_${profileName}_${timestamp}`);
@@ -136,10 +132,7 @@ export function exportAllData(
 /**
  * Exporta para JSON
  */
-export function exportToJSON<T>(
-  data: T,
-  filename: string
-): void {
+export function exportToJSON<T>(data: T, filename: string): void {
   const json = JSON.stringify(data, null, 2);
   downloadFile(json, `${filename}.json`, 'application/json');
 }
@@ -147,15 +140,13 @@ export function exportToJSON<T>(
 /**
  * Backup completo dos dados
  */
-export function createBackup(
-  data: {
-    transactions: Transaction[];
-    budgets: Budget[];
-    goals: Goal[];
-    exportedAt: string;
-    version: number;
-  }
-): void {
+export function createBackup(data: {
+  transactions: Transaction[];
+  budgets: Budget[];
+  goals: Goal[];
+  exportedAt: string;
+  version: number;
+}): void {
   const backup = {
     ...data,
     version: 1,
@@ -200,36 +191,40 @@ export function exportToPDF(
   filename: string = 'relatorio'
 ): void {
   const doc = new jsPDF();
-  
+
   // Título
   doc.setFontSize(20);
   doc.text('Relatório Financeiro Fins', 20, 20);
-  
+
   doc.setFontSize(12);
   doc.text(`Gerado em: ${new Date().toLocaleString('pt-BR')}`, 20, 35);
-  
+
   // Estatísticas
   const totalIncome = data.transactions
-    .filter(tx => tx.type === 'income')
+    .filter((tx) => tx.type === 'income')
     .reduce((sum, tx) => sum + tx.amount, 0);
   const totalExpense = data.transactions
-    .filter(tx => tx.type === 'expense')
+    .filter((tx) => tx.type === 'expense')
     .reduce((sum, tx) => sum + tx.amount, 0);
-  
+
   doc.text(`Receitas Totais: R$ ${totalIncome.toFixed(2)}`, 20, 50);
   doc.text(`Despesas Totais: R$ ${totalExpense.toFixed(2)}`, 20, 60);
   doc.text(`Saldo: R$ ${(totalIncome - totalExpense).toFixed(2)}`, 20, 70);
-  
+
   // Transações recentes (top 10)
   doc.text('Transações Recentes:', 20, 90);
   data.transactions
     .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
     .slice(0, 10)
     .forEach((tx, index) => {
-      const y = 100 + (index * 10);
+      const y = 100 + index * 10;
       const sign = tx.type === 'income' ? '+' : '-';
-      doc.text(`${tx.desc} - ${tx.category} - ${sign} R$ ${tx.amount.toFixed(2)} (${tx.date})`, 20, y);
+      doc.text(
+        `${tx.desc} - ${tx.category} - ${sign} R$ ${tx.amount.toFixed(2)} (${tx.date})`,
+        20,
+        y
+      );
     });
-  
+
   doc.save(`${filename}.pdf`);
 }

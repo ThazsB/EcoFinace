@@ -6,18 +6,14 @@
 
 import React, { useState, useMemo, useRef, useCallback } from 'react';
 import { useNotificationsStore } from '@/stores/notificationsStore';
-import type { NotificationCategory, NotificationPayload, NotificationAction } from '@/types/notifications';
+import type {
+  NotificationCategory,
+  NotificationPayload,
+  NotificationAction,
+} from '@/types/notifications';
 import { NOTIFICATION_CATEGORY_CONFIG } from '@/types/notifications';
-import {
-  X,
-  Check,
-  CheckCheck,
-  Search,
-  Settings,
-  ChevronRight,
-  Bell,
-  Trash2,
-} from 'lucide-react';
+import { NotificationItem } from './NotificationItem';
+import { X, Check, CheckCheck, Search, Settings, ChevronRight, Bell, Trash2 } from 'lucide-react';
 
 type TabCategory = 'all' | NotificationCategory;
 
@@ -100,10 +96,7 @@ export const NotificationCenter: React.FC = () => {
       // Filtro por busca
       if (searchQuery) {
         const query = searchQuery.toLowerCase();
-        if (
-          !n.title.toLowerCase().includes(query) &&
-          !n.message.toLowerCase().includes(query)
-        ) {
+        if (!n.title.toLowerCase().includes(query) && !n.message.toLowerCase().includes(query)) {
           return false;
         }
       }
@@ -126,9 +119,11 @@ export const NotificationCenter: React.FC = () => {
       />
 
       {/* Panel */}
-      <div className={`fixed right-0 top-0 h-full w-full max-w-md bg-card border-l border-border shadow-2xl z-50 flex flex-col overflow-hidden ${
-        isClosing ? 'animate-slide-out-right' : 'animate-slide-in-right'
-      }`}>
+      <div
+        className={`fixed right-0 top-0 h-full w-full max-w-md bg-card border-l border-border shadow-2xl z-50 flex flex-col overflow-hidden ${
+          isClosing ? 'animate-slide-out-right' : 'animate-slide-in-right'
+        }`}
+      >
         {/* Header */}
         <div className="flex-shrink-0 flex items-center justify-between p-4 border-b border-border">
           <div className="flex items-center gap-3">
@@ -140,9 +135,7 @@ export const NotificationCenter: React.FC = () => {
                 </span>
               )}
             </div>
-            <h2 className="text-lg font-semibold text-foreground">
-              Notificações
-            </h2>
+            <h2 className="text-lg font-semibold text-foreground">Notificações</h2>
           </div>
           <div className="flex items-center gap-1">
             <button
@@ -197,9 +190,7 @@ export const NotificationCenter: React.FC = () => {
                 onChange={(e) => setFilterUnreadOnly(e.target.checked)}
                 className="w-4 h-4 rounded border-border text-primary focus:ring-primary bg-accent"
               />
-              <span className="text-sm text-muted-foreground">
-                Somente não lidas
-              </span>
+              <span className="text-sm text-muted-foreground">Somente não lidas</span>
             </label>
           </div>
         </div>
@@ -243,9 +234,7 @@ export const NotificationCenter: React.FC = () => {
               <div className="w-16 h-16 mb-4 bg-accent rounded-full flex items-center justify-center">
                 <Bell className="w-8 h-8" />
               </div>
-              <p className="text-lg font-medium text-foreground mb-1">
-                Nenhuma notificação
-              </p>
+              <p className="text-lg font-medium text-foreground mb-1">Nenhuma notificação</p>
               <p className="text-sm text-muted-foreground">
                 {searchQuery
                   ? 'Tente buscar com outros termos'
@@ -319,11 +308,7 @@ const TabButton: React.FC<{
   isLast?: boolean;
 }> = ({ children, active, onClick, count, isFirst, isMiddle, isLast }) => {
   // Determina o raio das bordas baseado na posição
-  const roundedClass = isFirst 
-    ? 'rounded-l-md' 
-    : isLast 
-      ? 'rounded-r-md' 
-      : 'rounded-none';
+  const roundedClass = isFirst ? 'rounded-l-md' : isLast ? 'rounded-r-md' : 'rounded-none';
 
   return (
     <button
@@ -339,9 +324,7 @@ const TabButton: React.FC<{
         {count !== undefined && count > 0 && (
           <span
             className={`text-[10px] px-1 py-0.5 rounded ${
-              active
-                ? 'bg-muted text-muted-foreground'
-                : 'text-muted-foreground/70'
+              active ? 'bg-muted text-muted-foreground' : 'text-muted-foreground/70'
             }`}
           >
             {count > 99 ? '99+' : count}
@@ -352,158 +335,19 @@ const TabButton: React.FC<{
   );
 };
 
-// Componente de item de notificação
-const NotificationItem: React.FC<{
-  notification: NotificationPayload;
-  onMarkAsRead: () => void;
-  onDismiss: () => void;
-  onDelete: () => void;
-  onAction: (action: NotificationAction) => void;
-}> = ({ notification, onMarkAsRead, onDismiss, onDelete, onAction }) => {
-  const [showActions, setShowActions] = useState(false);
-  const categoryConfig = NOTIFICATION_CATEGORY_CONFIG[notification.category];
-
-  const isUnread = notification.status !== 'read';
-  const isDismissed = notification.status === 'dismissed';
-  const priorityColor = getPriorityColor(notification.priority);
-
-  const handleClick = () => {
-    if (isUnread) {
-      onMarkAsRead();
-    }
-    setShowActions(!showActions);
-  };
-
-  return (
-    <div
-      className={`relative p-4 hover:bg-accent/50 transition-all cursor-pointer ${
-        isUnread ? 'bg-primary/5' : ''
-      } ${isDismissed ? 'opacity-50' : ''}`}
-      onClick={handleClick}
-    >
-      <div className="flex gap-3">
-        {/* Category Icon */}
-        <div
-          className={`flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center text-lg bg-accent`}
-        >
-          <span>{categoryConfig.icon}</span>
-        </div>
-
-        {/* Content */}
-        <div className="flex-1 min-w-0">
-          <div className="flex items-start justify-between gap-2">
-            <div className="flex items-center gap-2">
-              {isUnread && (
-                <span className={`w-2 h-2 rounded-full ${priorityColor}`} />
-              )}
-              <h3
-                className={`font-medium ${
-                  isUnread
-                    ? 'text-foreground'
-                    : 'text-muted-foreground'
-                }`}
-              >
-                {notification.title}
-              </h3>
-            </div>
-            <span className="text-xs text-muted-foreground whitespace-nowrap flex-shrink-0">
-              {formatTimeAgo(notification.timestamp)}
-            </span>
-          </div>
-
-          <p className="text-sm text-muted-foreground mt-1 line-clamp-3">
-            {notification.message}
-          </p>
-
-          {/* Priority indicator */}
-          {notification.priority === 'urgent' && (
-            <span className="inline-flex items-center gap-1 mt-2 text-xs text-destructive font-medium">
-              <span className="w-1.5 h-1.5 bg-destructive rounded-full animate-pulse" />
-              Urgente
-            </span>
-          )}
-
-          {/* Actions */}
-          {showActions && notification.actions && notification.actions.length > 0 && (
-            <div className="flex gap-2 mt-3 flex-wrap">
-              {notification.actions.map((action) => (
-                <button
-                  key={action.id}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onAction(action);
-                  }}
-                  className={`px-3 py-1.5 text-sm rounded-lg transition-colors flex items-center gap-1 ${
-                    action.primary
-                      ? 'bg-primary text-primary-foreground hover:bg-primary/90'
-                      : 'bg-accent text-foreground hover:bg-accent/80'
-                  }`}
-                >
-                  {action.label}
-                  {action.url && <ChevronRight className="w-3 h-3" />}
-                </button>
-              ))}
-            </div>
-          )}
-        </div>
-
-        {/* Quick Actions */}
-        <div className="flex flex-col gap-1 flex-shrink-0">
-          {isUnread && (
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                onMarkAsRead();
-              }}
-              className="p-1.5 hover:bg-accent rounded transition-colors"
-              title="Marcar como lida"
-            >
-              <Check className="w-4 h-4 text-muted-foreground" />
-            </button>
-          )}
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              onDelete();
-            }}
-            className="p-1.5 hover:bg-destructive/20 rounded transition-colors"
-            title="Excluir"
-          >
-            <Trash2 className="w-4 h-4 text-muted-foreground hover:text-destructive" />
-          </button>
-        </div>
-      </div>
-
-      {/* Priority border */}
-      {notification.priority === 'urgent' && (
-        <div className="absolute left-0 top-0 bottom-0 w-1 bg-destructive rounded-l-lg" />
-      )}
-      {notification.priority === 'high' && (
-        <div className="absolute left-0 top-0 bottom-0 w-1 bg-orange-500 rounded-l-lg" />
-      )}
-    </div>
-  );
-};
-
 // Componente de configurações
 const NotificationSettingsPanel: React.FC = () => {
   const { preferences, updatePreferences, setQuietHours } = useNotificationsStore();
 
   return (
     <div className="p-4 border-b border-border bg-accent/30">
-      <h3 className="font-medium text-foreground mb-4">
-        Configurações
-      </h3>
+      <h3 className="font-medium text-foreground mb-4">Configurações</h3>
 
       {/* Global Toggle */}
       <div className="flex items-center justify-between py-2">
-        <span className="text-sm text-muted-foreground">
-          Notificações ativas
-        </span>
+        <span className="text-sm text-muted-foreground">Notificações ativas</span>
         <button
-          onClick={() =>
-            updatePreferences({ globalEnabled: !preferences.globalEnabled })
-          }
+          onClick={() => updatePreferences({ globalEnabled: !preferences.globalEnabled })}
           className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
             preferences.globalEnabled ? 'bg-primary' : 'bg-input'
           }`}
@@ -520,9 +364,7 @@ const NotificationSettingsPanel: React.FC = () => {
       <div className="flex items-center justify-between py-2">
         <span className="text-sm text-muted-foreground">Som</span>
         <button
-          onClick={() =>
-            updatePreferences({ soundEnabled: !preferences.soundEnabled })
-          }
+          onClick={() => updatePreferences({ soundEnabled: !preferences.soundEnabled })}
           className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
             preferences.soundEnabled ? 'bg-primary' : 'bg-input'
           }`}
@@ -537,13 +379,9 @@ const NotificationSettingsPanel: React.FC = () => {
 
       {/* Auto-dismiss Toggle */}
       <div className="flex items-center justify-between py-2">
-        <span className="text-sm text-muted-foreground">
-          Dispensar automaticamente
-        </span>
+        <span className="text-sm text-muted-foreground">Dispensar automaticamente</span>
         <button
-          onClick={() =>
-            updatePreferences({ autoDismissing: !preferences.autoDismissing })
-          }
+          onClick={() => updatePreferences({ autoDismissing: !preferences.autoDismissing })}
           className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
             preferences.autoDismissing ? 'bg-primary' : 'bg-input'
           }`}
@@ -560,9 +398,7 @@ const NotificationSettingsPanel: React.FC = () => {
       {preferences.autoDismissing && (
         <div className="py-2">
           <div className="flex items-center justify-between mb-2">
-            <span className="text-sm text-muted-foreground">
-              Tempo até dispensar
-            </span>
+            <span className="text-sm text-muted-foreground">Tempo até dispensar</span>
             <span className="text-sm font-medium text-foreground">
               {preferences.autoDismissDelay}s
             </span>
@@ -573,9 +409,7 @@ const NotificationSettingsPanel: React.FC = () => {
             max="30"
             step="1"
             value={preferences.autoDismissDelay}
-            onChange={(e) =>
-              updatePreferences({ autoDismissDelay: parseInt(e.target.value) })
-            }
+            onChange={(e) => updatePreferences({ autoDismissDelay: parseInt(e.target.value) })}
             className="w-full h-2 bg-input rounded-lg appearance-none cursor-pointer accent-primary"
           />
         </div>
@@ -584,9 +418,7 @@ const NotificationSettingsPanel: React.FC = () => {
       {/* Quiet Hours */}
       <div className="mt-4 pt-4 border-t border-border">
         <div className="flex items-center justify-between mb-3">
-          <span className="text-sm font-medium text-muted-foreground">
-            Horário de silêncio
-          </span>
+          <span className="text-sm font-medium text-muted-foreground">Horário de silêncio</span>
           <button
             onClick={() =>
               setQuietHours(
@@ -596,9 +428,7 @@ const NotificationSettingsPanel: React.FC = () => {
               )
             }
             className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-              preferences.quietHours.enabled
-                ? 'bg-primary'
-                : 'bg-input'
+              preferences.quietHours.enabled ? 'bg-primary' : 'bg-input'
             }`}
           >
             <span
@@ -612,9 +442,7 @@ const NotificationSettingsPanel: React.FC = () => {
         {preferences.quietHours.enabled && (
           <div className="flex gap-2 text-sm">
             <div className="flex-1">
-              <label className="block text-xs text-muted-foreground mb-1">
-                Início
-              </label>
+              <label className="block text-xs text-muted-foreground mb-1">Início</label>
               <input
                 type="time"
                 value={preferences.quietHours.startTime}

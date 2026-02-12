@@ -54,7 +54,14 @@ export const A11yButton = forwardRef<HTMLButtonElement, A11yButtonProps>(
             viewBox="0 0 24 24"
             aria-hidden="true"
           >
-            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+            <circle
+              className="opacity-25"
+              cx="12"
+              cy="12"
+              r="10"
+              stroke="currentColor"
+              strokeWidth="4"
+            />
             <path
               className="opacity-75"
               fill="currentColor"
@@ -87,10 +94,7 @@ export const A11yInput = forwardRef<HTMLInputElement, A11yInputProps>(
 
     return (
       <div className="space-y-1">
-        <label
-          htmlFor={inputId}
-          className="block text-sm font-medium text-foreground"
-        >
+        <label htmlFor={inputId} className="block text-sm font-medium text-foreground">
           {label}
           {required && (
             <span className="text-red-500 ml-1" aria-hidden="true">
@@ -105,9 +109,7 @@ export const A11yInput = forwardRef<HTMLInputElement, A11yInputProps>(
             'flex h-10 w-full rounded-lg border bg-background px-3 py-2 text-sm',
             'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary',
             'disabled:cursor-not-allowed disabled:opacity-50',
-            error
-              ? 'border-red-500 focus-visible:ring-red-500'
-              : 'border-input',
+            error ? 'border-red-500 focus-visible:ring-red-500' : 'border-input',
             className
           )}
           aria-invalid={error ? 'true' : 'false'}
@@ -180,12 +182,7 @@ interface LiveRegionProps {
 
 export function LiveRegion({ message, politeness = 'polite' }: LiveRegionProps) {
   return (
-    <div
-      role="status"
-      aria-live={politeness}
-      aria-atomic="true"
-      className="sr-only"
-    >
+    <div role="status" aria-live={politeness} aria-atomic="true" className="sr-only">
       {message}
     </div>
   );

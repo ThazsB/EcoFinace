@@ -2,7 +2,13 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '@/stores/authStore';
 import { useAppStore } from '@/stores/appStore';
-import { Camera, X, FolderKanban } from 'lucide-react';
+import { useOpenFinanceStore } from '@/stores/openFinanceStore';
+import {
+  BankConnectionModal,
+  BankAccountList,
+  TransactionImporter,
+} from '@/components/openfinance';
+import { Camera, X, FolderKanban, Building2, CreditCard, Upload } from 'lucide-react';
 
 export default function Settings() {
   const navigate = useNavigate();
@@ -10,7 +16,8 @@ export default function Settings() {
   const { data, init } = useAppStore();
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
   const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
-  const [activeTab, setActiveTab] = useState<'general'>('general');
+  const [isBankModalOpen, setIsBankModalOpen] = useState(false);
+  const [activeTab, setActiveTab] = useState<'general' | 'banking'>('general');
   const [editName, setEditName] = useState(user?.name || '');
   const [editAvatar, setEditAvatar] = useState(user?.avatar || '');
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
@@ -38,7 +45,7 @@ export default function Settings() {
         alert('Por favor, selecione um arquivo de imagem válido.');
         return;
       }
-      
+
       if (file.size > 5 * 1024 * 1024) {
         alert('A imagem deve ter no máximo 5MB.');
         return;
@@ -61,12 +68,12 @@ export default function Settings() {
 
   const handleSaveProfile = async () => {
     if (!user) return;
-    
+
     setIsSaving(true);
     try {
       await updateProfile(user.id, {
         name: editName,
-        avatar: editAvatar
+        avatar: editAvatar,
       });
       setIsProfileModalOpen(false);
       setAvatarPreview(null);
@@ -91,12 +98,22 @@ export default function Settings() {
         <button
           onClick={() => setActiveTab('general')}
           className={`px-4 py-2 border-b-2 transition-colors ${
-            activeTab === 'general' 
-              ? 'border-primary text-primary' 
+            activeTab === 'general'
+              ? 'border-primary text-primary'
               : 'border-transparent text-muted-foreground hover:text-foreground'
           }`}
         >
           Geral
+        </button>
+        <button
+          onClick={() => setActiveTab('banking')}
+          className={`px-4 py-2 border-b-2 transition-colors ${
+            activeTab === 'banking'
+              ? 'border-primary text-primary'
+              : 'border-transparent text-muted-foreground hover:text-foreground'
+          }`}
+        >
+          Contas Bancárias
         </button>
       </div>
 
@@ -106,7 +123,7 @@ export default function Settings() {
           {/* Profile Card */}
           <div className="bg-card p-6 rounded-lg border border-border">
             <h2 className="text-lg font-semibold mb-4">Perfil</h2>
-            
+
             <div className="flex items-center gap-4 mb-6">
               <div className="w-20 h-20 rounded-full bg-primary/20 flex items-center justify-center text-4xl overflow-hidden">
                 {user?.avatar?.startsWith('data:image/') ? (
@@ -115,7 +132,7 @@ export default function Settings() {
                   <span>{user?.avatar || '👤'}</span>
                 )}
               </div>
-              
+
               <div>
                 <p className="text-xl font-bold">{user?.name}</p>
                 <p className="text-muted-foreground">
@@ -166,18 +183,18 @@ export default function Settings() {
           {/* App Info */}
           <div className="bg-card p-6 rounded-lg border border-border">
             <h2 className="text-lg font-semibold mb-4">Informações do Aplicativo</h2>
-            
+
             <div className="space-y-2">
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Versão</span>
                 <span className="font-medium">1.0.0</span>
               </div>
-              
+
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Data de Criação</span>
                 <span className="font-medium">2024-01-01</span>
               </div>
-              
+
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Última Atualização</span>
                 <span className="font-medium">2024-01-01</span>
@@ -188,23 +205,23 @@ export default function Settings() {
           {/* Data Storage */}
           <div className="bg-card p-6 rounded-lg border border-border">
             <h2 className="text-lg font-semibold mb-4">Armazenamento de Dados</h2>
-            
+
             <div className="space-y-2">
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Total de Transações</span>
                 <span className="font-medium">{data.transactions.length}</span>
               </div>
-              
+
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Total de Metas</span>
                 <span className="font-medium">{data.goals.length}</span>
               </div>
-              
+
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Total de Orçamentos</span>
                 <span className="font-medium">{data.budgets.length}</span>
               </div>
-              
+
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Categorias Personalizadas</span>
                 <span className="font-medium">{data.categories.length}</span>
@@ -212,24 +229,81 @@ export default function Settings() {
             </div>
           </div>
 
-
           {/* Armazenamento Local */}
           <div className="bg-card p-6 rounded-lg border border-border">
             <h2 className="text-lg font-semibold mb-4">Armazenamento Local</h2>
-            
+
             <div className="space-y-2">
               <p className="text-muted-foreground">
                 Os dados são salvos localmente no navegador e persistem entre sessões.
               </p>
-              
+
               <div className="flex items-center gap-2 text-sm">
                 <span className="w-2 h-2 rounded-full bg-green-500"></span>
                 <span>LocalStorage ativo</span>
               </div>
-              
+
               <div className="flex items-center gap-2 text-sm">
                 <span className="w-2 h-2 rounded-full bg-blue-500"></span>
                 <span>IndexedDB disponível</span>
+              </div>
+            </div>
+          </div>
+        </>
+      )}
+
+      {/* Tab: Contas Bancárias */}
+      {activeTab === 'banking' && (
+        <>
+          {/* Bank Accounts */}
+          <div className="bg-card p-6 rounded-lg border border-border">
+            <h2 className="text-lg font-semibold mb-4">Contas Conectadas</h2>
+            <BankAccountList />
+            <div className="mt-4">
+              <button
+                onClick={() => setIsBankModalOpen(true)}
+                className="px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors flex items-center gap-2"
+              >
+                <Building2 className="w-4 h-4" />
+                Conectar Nova Conta
+              </button>
+            </div>
+          </div>
+
+          {/* Transaction Importer */}
+          <div className="bg-card p-6 rounded-lg border border-border">
+            <h2 className="text-lg font-semibold mb-4">Importar Transações</h2>
+            <TransactionImporter />
+          </div>
+
+          {/* Open Finance Info */}
+          <div className="bg-card p-6 rounded-lg border border-border">
+            <h2 className="text-lg font-semibold mb-4">Sobre o Open Finance</h2>
+            <p className="text-muted-foreground mb-4">
+              O Open Finance Brasil permite que você conecte suas contas bancárias de forma segura.
+              Você controla quais dados compartilha e pode revogar o acesso a qualquer momento.
+            </p>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <div className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg">
+                <Building2 className="w-5 h-5 text-primary" />
+                <div>
+                  <p className="font-medium">Contas Bancárias</p>
+                  <p className="text-sm text-muted-foreground">Visualize suas contas</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg">
+                <CreditCard className="w-5 h-5 text-primary" />
+                <div>
+                  <p className="font-medium">Transações</p>
+                  <p className="text-sm text-muted-foreground">Sincronize extratos</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg">
+                <Upload className="w-5 h-5 text-primary" />
+                <div>
+                  <p className="font-medium">Importação</p>
+                  <p className="text-sm text-muted-foreground">CSV e OFX</p>
+                </div>
               </div>
             </div>
           </div>
@@ -241,7 +315,7 @@ export default function Settings() {
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
           <div className="bg-card rounded-lg border border-border w-full max-w-md p-6">
             <h2 className="text-xl font-bold mb-4">Editar Perfil</h2>
-            
+
             <div className="space-y-4">
               <div>
                 <label className="block text-sm font-medium mb-2">Nome</label>
@@ -255,17 +329,18 @@ export default function Settings() {
 
               <div>
                 <label className="block text-sm font-medium mb-2">Avatar</label>
-                
+
                 {/* Preview da imagem */}
                 <div className="flex items-center gap-4 mb-3">
                   <div className="w-20 h-20 rounded-full bg-primary/20 flex items-center justify-center text-4xl overflow-hidden border-2 border-border">
-                    {avatarPreview || (editAvatar?.startsWith('data:image/') ? (
-                      <img src={editAvatar} alt="Avatar" className="w-full h-full object-cover" />
-                    ) : (
-                      <span>{editAvatar || '👤'}</span>
-                    ))}
+                    {avatarPreview ||
+                      (editAvatar?.startsWith('data:image/') ? (
+                        <img src={editAvatar} alt="Avatar" className="w-full h-full object-cover" />
+                      ) : (
+                        <span>{editAvatar || '👤'}</span>
+                      ))}
                   </div>
-                  
+
                   <div className="flex gap-2">
                     <button
                       type="button"
@@ -275,8 +350,8 @@ export default function Settings() {
                       <Camera className="w-4 h-4" />
                       Selecionar Imagem
                     </button>
-                    
-                    {avatarPreview || (editAvatar?.startsWith('data:image/')) ? (
+
+                    {avatarPreview || editAvatar?.startsWith('data:image/') ? (
                       <button
                         type="button"
                         onClick={handleRemoveImage}
@@ -288,7 +363,7 @@ export default function Settings() {
                     ) : null}
                   </div>
                 </div>
-                
+
                 <input
                   ref={fileInputRef}
                   type="file"
@@ -296,7 +371,7 @@ export default function Settings() {
                   onChange={handleFileSelect}
                   className="hidden"
                 />
-                
+
                 <p className="text-xs text-muted-foreground">
                   Formatos aceitos: JPG, PNG, GIF. Tamanho máximo: 5MB
                 </p>
@@ -333,7 +408,7 @@ export default function Settings() {
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
           <div className="bg-card rounded-lg border border-border w-full max-w-md p-6">
             <h2 className="text-xl font-bold mb-4">Alterar Senha</h2>
-            
+
             <div className="space-y-4">
               <div>
                 <label className="block text-sm font-medium mb-2">Senha Atual</label>
@@ -378,6 +453,11 @@ export default function Settings() {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Bank Connection Modal */}
+      {isBankModalOpen && (
+        <BankConnectionModal isOpen={isBankModalOpen} onClose={() => setIsBankModalOpen(false)} />
       )}
     </div>
   );

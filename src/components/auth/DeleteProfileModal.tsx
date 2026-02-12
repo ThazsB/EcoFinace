@@ -10,7 +10,12 @@ interface DeleteProfileModalProps {
   onCancel: () => void;
 }
 
-export function DeleteProfileModal({ profile, currentUserId, onConfirm, onCancel }: DeleteProfileModalProps) {
+export function DeleteProfileModal({
+  profile,
+  currentUserId,
+  onConfirm,
+  onCancel,
+}: DeleteProfileModalProps) {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -31,7 +36,7 @@ export function DeleteProfileModal({ profile, currentUserId, onConfirm, onCancel
 
     try {
       const isValid = await onConfirm(password);
-      
+
       if (isValid) {
         setSuccess(true);
         setTimeout(() => {
@@ -82,7 +87,9 @@ export function DeleteProfileModal({ profile, currentUserId, onConfirm, onCancel
                 >
                   <Check className="w-8 h-8 text-green-600 dark:text-green-400" />
                 </motion.div>
-                <p className="text-base font-medium text-green-600 dark:text-green-400">Perfil excluído!</p>
+                <p className="text-base font-medium text-green-600 dark:text-green-400">
+                  Perfil excluído!
+                </p>
               </div>
             ) : (
               <>
@@ -98,7 +105,7 @@ export function DeleteProfileModal({ profile, currentUserId, onConfirm, onCancel
 
                 {/* Profile Info */}
                 <div className="flex items-center gap-3 mb-4 p-3 bg-muted/50 dark:bg-muted/20 rounded-2xl">
-                  <div 
+                  <div
                     className="w-10 h-10 rounded-xl flex items-center justify-center text-lg"
                     style={{ backgroundColor: `${profile.color}25` }}
                   >
@@ -138,9 +145,7 @@ export function DeleteProfileModal({ profile, currentUserId, onConfirm, onCancel
                         placeholder="Digite sua senha"
                         autoFocus
                       />
-                      {error && (
-                        <p className="text-red-500 text-xs text-center mt-2">{error}</p>
-                      )}
+                      {error && <p className="text-red-500 text-xs text-center mt-2">{error}</p>}
                     </div>
 
                     {/* Actions */}

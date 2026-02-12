@@ -20,13 +20,14 @@ export const CategoryIconSelector: React.FC<CategoryIconSelectorProps> = ({
   const pickerRef = useRef<HTMLDivElement>(null);
 
   // Filtrar ícones pela busca
-  const filteredIcons = CATEGORY_ICONS.filter(icon =>
-    icon.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    icon.id.toLowerCase().includes(searchQuery.toLowerCase())
+  const filteredIcons = CATEGORY_ICONS.filter(
+    (icon) =>
+      icon.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      icon.id.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   // Encontrar ícone selecionado
-  const selectedIconData = CATEGORY_ICONS.find(icon => icon.id === selectedIcon);
+  const selectedIconData = CATEGORY_ICONS.find((icon) => icon.id === selectedIcon);
   const SelectedIconComponent = selectedIconData?.component;
 
   // Fechar ao clicar fora
@@ -55,7 +56,7 @@ export const CategoryIconSelector: React.FC<CategoryIconSelectorProps> = ({
         className="flex items-center gap-2 px-4 py-2 bg-background border border-border rounded-lg hover:bg-accent transition-colors w-full justify-between"
       >
         <div className="flex items-center gap-2">
-          <div 
+          <div
             className="w-8 h-8 rounded-full flex items-center justify-center"
             style={{ backgroundColor: `${selectedIconData?.color || '#6366f1'}20` }}
           >
@@ -75,7 +76,10 @@ export const CategoryIconSelector: React.FC<CategoryIconSelectorProps> = ({
           {/* Header */}
           <div className="p-3 border-b border-border">
             <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground" size={16} />
+              <Search
+                className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground"
+                size={16}
+              />
               <input
                 type="text"
                 placeholder="Buscar ícone..."

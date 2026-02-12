@@ -39,9 +39,9 @@ export const CategoryColorPicker: React.FC<CategoryColorPickerProps> = ({
                 ? 'border-foreground scale-110'
                 : 'border-transparent hover:scale-105'
             }`}
-            style={{ 
+            style={{
               backgroundColor: color.value,
-              boxShadow: selectedColor === color.value ? `0 0 0 2px ${color.value}40` : 'none'
+              boxShadow: selectedColor === color.value ? `0 0 0 2px ${color.value}40` : 'none',
             }}
             title={color.name}
             aria-label={`Selecionar cor ${color.name}`}

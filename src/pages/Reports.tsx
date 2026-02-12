@@ -13,11 +13,13 @@ import { Transaction } from '@/types';
 import { Download, Filter, Calendar } from 'lucide-react';
 import { ReportsSkeleton, Skeleton } from '@/components/ui/Skeleton';
 import { ExportModal, useExportModal } from '@/components/export/ExportModal';
+import { useToast } from '@/components/notifications/ToastContainer';
 
 export default function Reports() {
   const { user } = useAuthStore();
-  const { data, init, loading } = useAppStore();
+  const { data, init, loading, getActiveFixedExpenses } = useAppStore();
   const { isOpen, open, close } = useExportModal();
+  const { showToast } = useToast();
   const [currentYear, setCurrentYear] = useState(new Date().getFullYear());
   const [selectedMonth, setSelectedMonth] = useState<number | null>(null);
   const [hasInitialized, setHasInitialized] = useState(false);
@@ -29,7 +31,7 @@ export default function Reports() {
         setHasInitialized(true);
       }
     };
-    
+
     initialize();
   }, [user, init]);
 
@@ -44,52 +46,83 @@ export default function Reports() {
   }, [data.transactions, currentYear, selectedMonth]);
 
   const stats = useMemo(() => {
-    const totalIncome = filteredTransactions
+    // Calcular totais das transações
+    const totalIncomeFromTransactions = filteredTransactions
       .filter((tx: Transaction) => tx.type === 'income')
       .reduce((sum: number, tx: Transaction) => sum + tx.amount, 0);
 
-    const totalExpense = filteredTransactions
+    const totalExpenseFromTransactions = filteredTransactions
       .filter((tx: Transaction) => tx.type === 'expense')
       .reduce((sum: number, tx: Transaction) => sum + tx.amount, 0);
+
+    // Calcular valores fixos ativos
+    const activeFixedExpenses = getActiveFixedExpenses();
+    const monthlyFixedIncome = activeFixedExpenses
+      .filter((expense: any) => expense.type === 'income')
+      .reduce((sum: number, expense: any) => sum + expense.amount, 0);
+
+    const monthlyFixedExpense = activeFixedExpenses
+      .filter((expense: any) => expense.type === 'expense')
+      .reduce((sum: number, expense: any) => sum + expense.amount, 0);
+
+    const totalIncome = totalIncomeFromTransactions + monthlyFixedIncome;
+    const totalExpense = totalExpenseFromTransactions + monthlyFixedExpense;
 
     return {
       totalIncome,
       totalExpense,
       netIncome: totalIncome - totalExpense,
+      incomeFromTransactions: totalIncomeFromTransactions,
+      expenseFromTransactions: totalExpenseFromTransactions,
+      monthlyFixedIncome,
+      monthlyFixedExpense,
     };
-  }, [filteredTransactions]);
+  }, [filteredTransactions, data.fixedExpenses, getActiveFixedExpenses]);
 
   const expenseByCategory = useMemo(() => {
     return filteredTransactions
       .filter((tx: Transaction) => tx.type === 'expense')
-      .reduce((acc: Record<string, number>, tx: Transaction) => {
-        acc[tx.category] = (acc[tx.category] || 0) + tx.amount;
-        return acc;
-      }, {} as Record<string, number>);
+      .reduce(
+        (acc: Record<string, number>, tx: Transaction) => {
+          acc[tx.category] = (acc[tx.category] || 0) + tx.amount;
+          return acc;
+        },
+        {} as Record<string, number>
+      );
   }, [filteredTransactions]);
 
   const monthlyData = useMemo(() => {
+    // Calcular valores fixos ativos uma vez
+    const activeFixedExpenses = getActiveFixedExpenses();
+    const monthlyFixedIncome = activeFixedExpenses
+      .filter((expense: any) => expense.type === 'income')
+      .reduce((sum: number, expense: any) => sum + expense.amount, 0);
+
+    const monthlyFixedExpense = activeFixedExpenses
+      .filter((expense: any) => expense.type === 'expense')
+      .reduce((sum: number, expense: any) => sum + expense.amount, 0);
+
     return Array.from({ length: 12 }, (_, i) => {
       const monthTransactions = data.transactions.filter((tx: Transaction) => {
         const txDate = new Date(tx.date);
         return txDate.getFullYear() === currentYear && txDate.getMonth() === i;
       });
 
-      const income = monthTransactions
+      const incomeFromTransactions = monthTransactions
         .filter((tx: Transaction) => tx.type === 'income')
         .reduce((sum: number, tx: Transaction) => sum + tx.amount, 0);
 
-      const expense = monthTransactions
+      const expenseFromTransactions = monthTransactions
         .filter((tx: Transaction) => tx.type === 'expense')
         .reduce((sum: number, tx: Transaction) => sum + tx.amount, 0);
 
       return {
         month: new Date(currentYear, i).toLocaleString('pt-BR', { month: 'short' }),
-        income,
-        expense,
+        income: incomeFromTransactions + monthlyFixedIncome,
+        expense: expenseFromTransactions + monthlyFixedExpense,
       };
     });
-  }, [data.transactions, currentYear]);
+  }, [data.transactions, data.fixedExpenses, currentYear]);
 
   const detailedTransactions = useMemo(() => {
     return [...filteredTransactions].sort(
@@ -100,8 +133,18 @@ export default function Reports() {
   const yearRange = Array.from({ length: 5 }, (_, i) => currentYear - 2 + i);
 
   const months = [
-    'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
-    'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro',
+    'Janeiro',
+    'Fevereiro',
+    'Março',
+    'Abril',
+    'Maio',
+    'Junho',
+    'Julho',
+    'Agosto',
+    'Setembro',
+    'Outubro',
+    'Novembro',
+    'Dezembro',
   ];
 
   const isLoading = loading || !hasInitialized;
@@ -113,9 +156,7 @@ export default function Reports() {
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-2xl font-bold">Relatórios</h1>
-            <p className="text-muted-foreground">
-              Análise detalhada das suas finanças
-            </p>
+            <p className="text-muted-foreground">Análise detalhada das suas finanças</p>
           </div>
           <button
             disabled={isLoading}
@@ -228,7 +269,10 @@ export default function Reports() {
           {isLoading ? (
             <div className="space-y-3">
               {Array.from({ length: 5 }).map((_, i) => (
-                <div key={i} className="flex items-center justify-between p-4 rounded-lg border border-border">
+                <div
+                  key={i}
+                  className="flex items-center justify-between p-4 rounded-lg border border-border"
+                >
                   <div className="flex items-center gap-4">
                     <Skeleton className="w-12 h-12 rounded-full" />
                     <div className="space-y-2">
@@ -263,14 +307,17 @@ export default function Reports() {
                       {(() => {
                         const IconComponent = getCategoryIcon(tx.category);
                         const color = getCategoryColor(tx.category);
-                        return IconComponent ? <IconComponent size={24} style={{ color }} className="lucide-icon" /> : null;
+                        return IconComponent ? (
+                          <IconComponent size={24} style={{ color }} className="lucide-icon" />
+                        ) : null;
                       })()}
                     </div>
 
                     <div>
                       <p className="font-medium">{tx.desc}</p>
                       <p className="text-sm text-muted-foreground">
-                        {tx.category} • {(() => {
+                        {tx.category} •{' '}
+                        {(() => {
                           const date = new Date(tx.date);
                           date.setTime(date.getTime() + date.getTimezoneOffset() * 60000);
                           return date.toLocaleDateString('pt-BR');
@@ -299,7 +346,7 @@ export default function Reports() {
         data={{
           transactions: data.transactions,
           budgets: data.budgets,
-          goals: data.goals
+          goals: data.goals,
         }}
         profileName={user?.name || 'usuario'}
       />

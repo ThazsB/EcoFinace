@@ -15,6 +15,7 @@ interface GoalStatus {
   name: string;
   current: number;
   target: number;
+  percentage: number;
 }
 
 export default function Goals() {
@@ -51,6 +52,7 @@ export default function Goals() {
       name: goal.name,
       current: goal.current,
       target: goal.target,
+      percentage: Math.round((goal.current / goal.target) * 100),
     }));
   }, [data.goals]);
 
@@ -61,13 +63,13 @@ export default function Goals() {
         setHasInitialized(true);
       }
     };
-    
+
     initialize();
   }, [user, init]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!newGoal.name.trim()) {
       alert('Por favor, digite um nome para a meta');
       return;
@@ -82,30 +84,32 @@ export default function Goals() {
     addGoal({
       name: newGoal.name.trim(),
       target,
-    }).then(() => {
-      // Mostrar toast de sucesso
-      showGoalCreated({ name: newGoal.name.trim(), target });
-      
-      setNewGoal({
-        name: '',
-        target: '',
+    })
+      .then(() => {
+        // Mostrar toast de sucesso
+        showGoalCreated({ name: newGoal.name.trim(), target });
+
+        setNewGoal({
+          name: '',
+          target: '',
+        });
+        setIsModalOpen(false);
+
+        // Check goal alerts after adding new goal
+        if (data.goals.length > 0) {
+          const goalStatuses = getGoalStatuses();
+          checkGoalAlerts(goalStatuses);
+        }
+      })
+      .catch((error) => {
+        showGoalError({ name: newGoal.name.trim() });
+        console.error('Erro ao criar meta:', error);
       });
-      setIsModalOpen(false);
-      
-      // Check goal alerts after adding new goal
-      if (data.goals.length > 0) {
-        const goalStatuses = getGoalStatuses();
-        checkGoalAlerts(goalStatuses);
-      }
-    }).catch((error) => {
-      showGoalError({ name: newGoal.name.trim() });
-      console.error('Erro ao criar meta:', error);
-    });
   };
 
   const handleAddValueSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!selectedGoalId) {
       alert('Selecione uma meta');
       return;
@@ -117,63 +121,69 @@ export default function Goals() {
       return;
     }
 
-    addGoalValue(selectedGoalId, value).then(() => {
-      // Verificar se a meta atingiu 100%
-      const goal = data.goals.find((g: Goal) => g.id === selectedGoalId);
-      if (goal) {
-        const newProgress = goal.current + value;
-        const wasBelowTarget = goal.current < goal.target;
-        const isNowComplete = newProgress >= goal.target;
-        
-        if (wasBelowTarget && isNowComplete) {
-          // Verificar se já existe notificação de meta atingida para esta meta
-          const goalTitle = '🏆 Meta Atingida!';
-          const goalMessage = `Parabéns! Você completou a meta "${goal.name}" de ${new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(goal.target)}`;
-          
-          // Verificar duplicata antes de adicionar
-          const hasDuplicate = hasDuplicateNotification(goalTitle, goalMessage, 'achievement', 300000); // 5 minutos
-          
-          if (!hasDuplicate) {
-            // Meta concluída! Adicionar notificação ao Notification Center
-            addNotification({
-              profileId: localStorage.getItem('ecofinance_active_profile') || '',
-              title: goalTitle,
-              message: goalMessage,
-              category: 'achievement',
-              priority: 'high',
-              channels: ['in_app'],
-              actions: [
-                {
-                  id: 'view_goal',
-                  label: 'Ver Meta',
-                  primary: true,
-                },
-              ],
-            });
+    addGoalValue(selectedGoalId, value)
+      .then(() => {
+        // Verificar se a meta atingiu 100%
+        const goal = data.goals.find((g: Goal) => g.id === selectedGoalId);
+        if (goal) {
+          const newProgress = goal.current + value;
+          const wasBelowTarget = goal.current < goal.target;
+          const isNowComplete = newProgress >= goal.target;
+
+          if (wasBelowTarget && isNowComplete) {
+            // Verificar se já existe notificação de meta atingida para esta meta
+            const goalTitle = '🏆 Meta Atingida!';
+            const goalMessage = `Parabéns! Você completou a meta "${goal.name}" de ${new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(goal.target)}`;
+
+            // Verificar duplicata antes de adicionar
+            const hasDuplicate = hasDuplicateNotification(
+              goalTitle,
+              goalMessage,
+              'achievement',
+              300000
+            ); // 5 minutos
+
+            if (!hasDuplicate) {
+              // Meta concluída! Adicionar notificação ao Notification Center
+              addNotification({
+                title: goalTitle,
+                message: goalMessage,
+                category: 'achievement',
+                priority: 'high',
+                channels: ['in_app'],
+                actions: [
+                  {
+                    id: 'view_goal',
+                    label: 'Ver Meta',
+                    primary: true,
+                  },
+                ],
+              });
+            }
+
+            // Mostrar toast de contribuição
+            showGoalContribution({ name: goal.name, current: value, target: newProgress });
+          } else {
+            // Apenas contribuição normal
+            showGoalContribution({ name: goal.name, current: value, target: newProgress });
           }
-          
-          // Mostrar toast de contribuição
-          showGoalContribution({ name: goal.name, current: value, target: newProgress });
-        } else {
-          // Apenas contribuição normal
-          showGoalContribution({ name: goal.name, current: value, target: newProgress });
         }
-      }
-      
-      setGoalValue('');
-      setSelectedGoalId(null);
-      setIsAddValueModalOpen(false);
-      
-      // Check goal alerts after adding value
-      if (data.goals.length > 0) {
-        const goalStatuses = getGoalStatuses();
-        checkGoalAlerts(goalStatuses);
-      }
-    }).catch((error) => {
-      const goal = data.goals.find((g: Goal) => g.id === selectedGoalId);
-      showGoalError({ name: goal?.name || 'Meta' });
-      console.error('Erro ao adicionar valor à meta:', error);
-    });
+
+        setGoalValue('');
+        setSelectedGoalId(null);
+        setIsAddValueModalOpen(false);
+
+        // Check goal alerts after adding value
+        if (data.goals.length > 0) {
+          const goalStatuses = getGoalStatuses();
+          checkGoalAlerts(goalStatuses);
+        }
+      })
+      .catch((error) => {
+        const goal = data.goals.find((g: Goal) => g.id === selectedGoalId);
+        showGoalError({ name: goal?.name || 'Meta' });
+        console.error('Erro ao adicionar valor à meta:', error);
+      });
   };
 
   // Open confirm dialog for deletion
@@ -191,11 +201,11 @@ export default function Goals() {
   // Confirm deletion
   const handleConfirmDelete = () => {
     if (confirmDialog.goal) {
-      setConfirmDialog(prev => ({ ...prev, isDeleting: true }));
-      
+      setConfirmDialog((prev) => ({ ...prev, isDeleting: true }));
+
       showGoalDelete({ name: confirmDialog.goal.name });
       deleteGoal(confirmDialog.goal.id);
-      
+
       setConfirmDialog({
         isOpen: false,
         goal: null,
@@ -216,7 +226,7 @@ export default function Goals() {
   // Format goal details for dialog
   const getGoalDetails = (goal: Goal) => {
     const progressPercent = Math.round((goal.current / goal.target) * 100);
-    
+
     return [
       {
         label: 'Meta',
@@ -267,7 +277,7 @@ export default function Goals() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {data.goals.map((goal: Goal) => {
             const percentage = Math.min((goal.current / goal.target) * 100, 100);
-            
+
             // Estilo progressivo contínuo baseado no percentual
             const getProgressStyle = (percent: number) => {
               const p = Math.max(0, Math.min(100, percent));
@@ -287,10 +297,7 @@ export default function Goals() {
             };
 
             return (
-              <div
-                key={goal.id}
-                className="bg-card p-6 rounded-lg border border-border"
-              >
+              <div key={goal.id} className="bg-card p-6 rounded-lg border border-border">
                 <div className="flex items-center justify-between mb-4">
                   <h3 className="text-lg font-semibold">{goal.name}</h3>
                   <button
@@ -326,7 +333,9 @@ export default function Goals() {
                   </div>
                   <div className="flex items-center justify-between">
                     <span className="text-sm text-muted-foreground">Faltante:</span>
-                    <span className="font-medium">{formatCurrency(goal.target - goal.current)}</span>
+                    <span className="font-medium">
+                      {formatCurrency(goal.target - goal.current)}
+                    </span>
                   </div>
                 </div>
 
@@ -350,7 +359,7 @@ export default function Goals() {
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
           <div className="bg-card rounded-lg border border-border w-full max-w-md p-6">
             <h2 className="text-xl font-bold mb-4">Nova Meta</h2>
-            
+
             <form onSubmit={handleSubmit} className="space-y-4">
               <div>
                 <label className="block text-sm font-medium mb-2">Nome da Meta</label>
@@ -400,7 +409,7 @@ export default function Goals() {
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
           <div className="bg-card rounded-lg border border-border w-full max-w-md p-6">
             <h2 className="text-xl font-bold mb-4">Adicionar Valor à Meta</h2>
-            
+
             <form onSubmit={handleAddValueSubmit} className="space-y-4">
               <div>
                 <label className="block text-sm font-medium mb-2">Valor</label>

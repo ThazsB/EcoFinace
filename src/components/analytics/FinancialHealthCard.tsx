@@ -13,9 +13,8 @@ export function FinancialHealthCard({
   monthlyIncome,
   monthlyExpenses,
 }: FinancialHealthCardProps) {
-  const savingsRate = monthlyIncome > 0 
-    ? ((monthlyIncome - monthlyExpenses) / monthlyIncome) * 100 
-    : 0;
+  const savingsRate =
+    monthlyIncome > 0 ? ((monthlyIncome - monthlyExpenses) / monthlyIncome) * 100 : 0;
 
   const getRatingColor = () => {
     switch (health.rating) {
@@ -69,12 +68,8 @@ export function FinancialHealthCard({
           </p>
         </div>
         <div className="text-right">
-          <div className={`text-4xl font-bold ${getRatingColor()}`}>
-            {health.score}
-          </div>
-          <div className={`text-sm font-medium ${getRatingColor()}`}>
-            {getRatingLabel()}
-          </div>
+          <div className={`text-4xl font-bold ${getRatingColor()}`}>{health.score}</div>
+          <div className={`text-sm font-medium ${getRatingColor()}`}>{getRatingLabel()}</div>
         </div>
       </div>
 
@@ -82,17 +77,22 @@ export function FinancialHealthCard({
       <div className="mb-6">
         <div className="flex items-center justify-between mb-2">
           <span className="text-sm text-muted-foreground">Taxa de Economia</span>
-          <span className={`font-semibold ${savingsRate >= 20 ? 'text-emerald-500' : savingsRate >= 10 ? 'text-blue-500' : savingsRate >= 0 ? 'text-yellow-500' : 'text-red-500'}`}>
+          <span
+            className={`font-semibold ${savingsRate >= 20 ? 'text-emerald-500' : savingsRate >= 10 ? 'text-blue-500' : savingsRate >= 0 ? 'text-yellow-500' : 'text-red-500'}`}
+          >
             {savingsRate.toFixed(1)}%
           </span>
         </div>
         <div className="h-3 bg-muted rounded-full overflow-hidden">
-          <div 
+          <div
             className={`h-full rounded-full transition-all ${
-              savingsRate >= 20 ? 'bg-emerald-500' 
-              : savingsRate >= 10 ? 'bg-blue-500' 
-              : savingsRate >= 0 ? 'bg-yellow-500' 
-              : 'bg-red-500'
+              savingsRate >= 20
+                ? 'bg-emerald-500'
+                : savingsRate >= 10
+                  ? 'bg-blue-500'
+                  : savingsRate >= 0
+                    ? 'bg-yellow-500'
+                    : 'bg-red-500'
             }`}
             style={{ width: `${Math.min(Math.abs(savingsRate), 100)}%` }}
           />

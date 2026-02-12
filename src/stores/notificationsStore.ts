@@ -4,10 +4,10 @@
 
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
-import type { 
-  NotificationPayload, 
+import type {
+  NotificationPayload,
   NotificationCategory,
-  CategoryChannelConfig 
+  CategoryChannelConfig,
 } from '@/types/notifications';
 import type { NotificationPreferences } from '@/types/notifications';
 import { DEFAULT_NOTIFICATION_PREFERENCES } from '@/types/notification-preferences';
@@ -19,6 +19,10 @@ interface DuplicateCheckResult {
   existingTimestamp?: string;
 }
 
+// Importar utilitários de similaridade
+import { StringSimilarity } from '@/utils/similarity/stringSimilarity';
+import { checkNotificationDuplicate } from '@/services/deduplicationService';
+
 // Função robusta para verificar duplicatas de notificação
 export function checkForDuplicate(
   notifications: NotificationPayload[],
@@ -28,149 +32,121 @@ export function checkForDuplicate(
   timeWindowMs: number = 60000 // 60 segundos padrão
 ): DuplicateCheckResult {
   const now = Date.now();
-  
+
   // Primeiro, verificar se há uma notificação exatamente igual (ignoring timestamp)
-  const exactMatch = notifications.find(n => 
-    n.title === title && 
-    n.message === message &&
-    n.category === category &&
-    n.status !== 'dismissed'
+  const exactMatch = notifications.find(
+    (n) =>
+      n.title === title &&
+      n.message === message &&
+      n.category === category &&
+      n.status !== 'dismissed'
   );
-  
+
   if (exactMatch) {
     return {
       isDuplicate: true,
       existingId: exactMatch.id,
-      existingTimestamp: exactMatch.timestamp
+      existingTimestamp: exactMatch.timestamp,
     };
   }
-  
+
   // Verificar dentro da janela de tempo para notificações similares
-  // Usamos uma fuzzy match para título (ignoring case e whitespace)
-  const normalizedTitle = title.toLowerCase().replace(/\s+/g, ' ').trim();
-  const normalizedMessage = message.toLowerCase().replace(/\s+/g, ' ').trim();
-  
-  const recentDuplicate = notifications.find(n => {
+  // Usamos algoritmos avançados de similaridade
+  const recentDuplicate = notifications.find((n) => {
     // Ignorar notificações muito antigas
     const notificationTime = new Date(n.timestamp).getTime();
     if (now - notificationTime > timeWindowMs) {
       return false;
     }
-    
+
     // Ignorar notificações já descartadas
     if (n.status === 'dismissed') {
       return false;
     }
-    
+
     // Verificar se é uma notificação similar (dentro da mesma categoria)
     if (n.category !== category) {
       return false;
     }
-    
-    const existingNormalizedTitle = n.title.toLowerCase().replace(/\s+/g, ' ').trim();
-    const existingNormalizedMessage = n.message.toLowerCase().replace(/\s+/g, ' ').trim();
-    
-    // Verificar similaridade do título (80% de match)
-    const titleSimilarity = calculateSimilarity(normalizedTitle, existingNormalizedTitle);
-    
-    // Verificar similaridade da mensagem
-    const messageSimilarity = calculateSimilarity(normalizedMessage, existingNormalizedMessage);
-    
+
+    // Comparar similaridade usando algoritmos avançados
+    const titleResult = StringSimilarity.compare(title, n.title, {
+      threshold: 0.9, // 90% para títulos
+      method: 'jaro',
+    });
+
+    const messageResult = StringSimilarity.compare(message, n.message, {
+      threshold: 0.8, // 80% para mensagens
+      method: 'cosine',
+    });
+
     // Se tanto título quanto mensagem são muito similares, é uma duplicata
-    return titleSimilarity > 0.8 && messageSimilarity > 0.8;
+    return titleResult.isDuplicate && messageResult.isDuplicate;
   });
-  
+
   if (recentDuplicate) {
     return {
       isDuplicate: true,
       existingId: recentDuplicate.id,
-      existingTimestamp: recentDuplicate.timestamp
+      existingTimestamp: recentDuplicate.timestamp,
     };
   }
-  
-  return { isDuplicate: false };
-}
 
-// Função para calcular similaridade entre duas strings (0 a 1)
-function calculateSimilarity(str1: string, str2: string): number {
-  if (str1 === str2) return 1;
-  if (str1.length === 0 || str2.length === 0) return 0;
-  
-  // Usar algoritmo de Levenshtein para calcular distância
-  const track = Array(str2.length + 1).fill(null).map(() =>
-    Array(str1.length + 1).fill(null)
-  );
-  
-  for (let i = 0; i <= str1.length; i += 1) {
-    track[0][i] = i;
-  }
-  
-  for (let j = 0; j <= str2.length; j += 1) {
-    track[j][0] = j;
-  }
-  
-  for (let j = 1; j <= str2.length; j += 1) {
-    for (let i = 1; i <= str1.length; i += 1) {
-      const indicator = str1[i - 1] === str2[j - 1] ? 0 : 1;
-      track[j][i] = Math.min(
-        track[j][i - 1] + 1,
-        track[j - 1][i] + 1,
-        track[j - 1][i - 1] + indicator
-      );
-    }
-  }
-  
-  const distance = track[str2.length][str1.length];
-  const maxLength = Math.max(str1.length, str2.length);
-  
-  return maxLength === 0 ? 1 : 1 - distance / maxLength;
+  return { isDuplicate: false };
 }
 
 interface NotificationsState {
   // Estado das notificações
   notifications: NotificationPayload[];
   unreadCount: number;
-  
+
   // Preferências
   preferences: NotificationPreferences;
-  
+
   // Status de conexão
   isOnline: boolean;
   isSyncing: boolean;
   lastSyncTime: string | null;
-  
+
   // UI State
   isCenterOpen: boolean;
   isPermissionRequested: boolean;
-  
+
   // Ações de notificação
-  addNotification: (notification: Omit<NotificationPayload, 'id' | 'timestamp' | 'status'>) => boolean;
-  hasDuplicateNotification: (title: string, message: string, category: NotificationCategory, timeWindowMs?: number) => boolean;
+  addNotification: (
+    notification: Omit<NotificationPayload, 'id' | 'timestamp' | 'status' | 'profileId'>
+  ) => boolean;
+  hasDuplicateNotification: (
+    title: string,
+    message: string,
+    category: NotificationCategory,
+    timeWindowMs?: number
+  ) => boolean;
   markAsRead: (id: string) => void;
   markAllAsRead: () => void;
   dismissNotification: (id: string) => void;
   deleteNotification: (id: string) => void;
   clearAll: () => void;
-  
+
   // Ações de preferência
   updatePreferences: (prefs: Partial<NotificationPreferences>) => void;
   toggleCategory: (category: NotificationCategory, channel: 'in_app' | 'push') => void;
   setQuietHours: (enabled: boolean, start?: string, end?: string) => void;
-  
+
   // Ações de sincronização
   setOnlineStatus: (status: boolean) => void;
   syncWithServer: () => Promise<void>;
   mergeServerNotifications: (serverNotifications: NotificationPayload[]) => void;
-  
+
   // UI Actions
   openCenter: () => void;
   closeCenter: () => void;
   setPermissionRequested: (requested: boolean) => void;
-  
+
   // Toast Actions
   triggerToast: (notification: NotificationPayload) => void;
   processQueuedNotifications: () => void;
-  
+
   // Internal Actions
   _recalculateUnreadCount: () => void;
 }
@@ -191,26 +167,36 @@ export const useNotificationsStore = create<NotificationsState>()(
       // Recalcular unreadCount ao reidratar do storage
       _recalculateUnreadCount: () => {
         const { notifications } = get();
-        const unread = notifications.filter((n) => n.status !== 'read' && n.status !== 'dismissed').length;
+        const unread = notifications.filter(
+          (n) => n.status !== 'read' && n.status !== 'dismissed'
+        ).length;
         set({ unreadCount: unread });
       },
-      
+
       // Ações de notificação
       addNotification: (notification) => {
         const { preferences, notifications } = get();
-        
+
         // Verificar se global está habilitado
         if (!preferences.globalEnabled) {
           return false;
         }
-        
-        // Verificar se já existe notificação com mesmo título e mensagem (evitar duplicatas)
-        const duplicateCheck = checkForDuplicate(notifications, notification.title, notification.message, notification.category);
+
+        // Verificar duplicidade avançada usando o serviço de deduplicação
+        const priorityForDeduplication =
+          notification.priority === 'low' ? 'normal' : notification.priority;
+        const duplicateCheck = checkNotificationDuplicate(
+          notification.title,
+          notification.message,
+          notification.category,
+          priorityForDeduplication
+        );
+
         if (duplicateCheck.isDuplicate) {
           // Notificação duplicada, não adicionar
           return false;
         }
-        
+
         // Verificar horário de silêncio
         if (preferences.quietHours.enabled && isInQuietHours(preferences.quietHours)) {
           // Adicionar à fila para entrega posterior
@@ -222,52 +208,54 @@ export const useNotificationsStore = create<NotificationsState>()(
           localStorage.setItem('notification_queue', JSON.stringify(queued.slice(-50)));
           return true;
         }
-        
+
         // Verificar limite diário por categoria (apenas para notificações não-urgentes)
         const categoryLimit = getCategoryDailyLimit(notification.category);
         if (categoryLimit > 0 && notification.priority !== 'urgent') {
-          const todayNotifications = get().notifications.filter(n => 
-            n.category === notification.category &&
-            new Date(n.timestamp).toDateString() === new Date().toDateString()
+          const todayNotifications = get().notifications.filter(
+            (n) =>
+              n.category === notification.category &&
+              new Date(n.timestamp).toDateString() === new Date().toDateString()
           );
           if (todayNotifications.length >= categoryLimit) {
             return false; // Limite atingido
           }
         }
-        
+
         const newNotification: NotificationPayload = {
           ...notification,
           id: crypto.randomUUID(),
           timestamp: new Date().toISOString(),
           status: 'sent',
+          profileId: preferences.profileId, // Adicionar profileId do usuário
         };
-        
+
         set((state) => ({
           notifications: [newNotification, ...state.notifications].slice(0, 100),
           unreadCount: state.unreadCount + 1,
         }));
-        
+
         // Trigger toast para notificações in_app
         const categoryConfig = preferences.categories[notification.category];
         const hasInAppChannel = categoryConfig?.channels.includes('in_app');
-        
+
         // Mostra toast se:
         // 1. Categoria tem canal in_app configurado, OU
         // 2. É um orçamento (sempre mostra toast)
         if (hasInAppChannel || notification.category === 'budget') {
           get().triggerToast(newNotification);
         }
-        
+
         return true;
       },
-      
+
       // Função para verificar duplicatas externamente
       hasDuplicateNotification: (title, message, category, timeWindowMs = 60000) => {
         const { notifications } = get();
         const result = checkForDuplicate(notifications, title, message, category, timeWindowMs);
         return result.isDuplicate;
       },
-      
+
       markAsRead: (id) => {
         set((state) => ({
           notifications: state.notifications.map((n) =>
@@ -276,7 +264,7 @@ export const useNotificationsStore = create<NotificationsState>()(
           unreadCount: Math.max(0, state.unreadCount - 1),
         }));
       },
-      
+
       markAllAsRead: () => {
         set((state) => ({
           notifications: state.notifications.map((n) => ({
@@ -287,20 +275,22 @@ export const useNotificationsStore = create<NotificationsState>()(
           unreadCount: 0,
         }));
       },
-      
+
       dismissNotification: (id) => {
         set((state) => {
           const notification = state.notifications.find((n) => n.id === id);
           const wasUnread = notification && notification.status !== 'read';
           return {
             notifications: state.notifications.map((n) =>
-              n.id === id ? { ...n, status: 'dismissed' as const, dismissedAt: new Date().toISOString() } : n
+              n.id === id
+                ? { ...n, status: 'dismissed' as const, dismissedAt: new Date().toISOString() }
+                : n
             ),
             unreadCount: wasUnread ? Math.max(0, state.unreadCount - 1) : state.unreadCount,
           };
         });
       },
-      
+
       deleteNotification: (id) => {
         set((state) => ({
           notifications: state.notifications.filter((n) => n.id !== id),
@@ -309,11 +299,11 @@ export const useNotificationsStore = create<NotificationsState>()(
             : state.unreadCount,
         }));
       },
-      
+
       clearAll: () => {
         set({ notifications: [], unreadCount: 0 });
       },
-      
+
       // Ações de preferência
       updatePreferences: (prefs) => {
         set((state) => ({
@@ -325,14 +315,14 @@ export const useNotificationsStore = create<NotificationsState>()(
           },
         }));
       },
-      
+
       toggleCategory: (category, channel) => {
         set((state) => {
           const currentConfig = state.preferences.categories[category];
           const channels = currentConfig?.channels.includes(channel)
             ? currentConfig.channels.filter((c) => c !== channel)
             : [...(currentConfig?.channels || []), channel];
-          
+
           return {
             preferences: {
               ...state.preferences,
@@ -349,7 +339,7 @@ export const useNotificationsStore = create<NotificationsState>()(
           };
         });
       },
-      
+
       setQuietHours: (enabled, start, end) => {
         set((state) => ({
           preferences: {
@@ -363,7 +353,7 @@ export const useNotificationsStore = create<NotificationsState>()(
           },
         }));
       },
-      
+
       // Ações de sincronização
       setOnlineStatus: (status) => {
         set({ isOnline: status });
@@ -372,11 +362,11 @@ export const useNotificationsStore = create<NotificationsState>()(
           get().syncWithServer();
         }
       },
-      
+
       syncWithServer: async () => {
         const { isOnline, preferences } = get();
         if (!isOnline) return;
-        
+
         set({ isSyncing: true });
         try {
           // TODO: Implementar sincronização com Supabase
@@ -389,7 +379,7 @@ export const useNotificationsStore = create<NotificationsState>()(
               localNotifications: get().notifications,
             }),
           });
-          
+
           if (response.ok) {
             const data = await response.json();
             get().mergeServerNotifications(data.serverNotifications);
@@ -401,62 +391,71 @@ export const useNotificationsStore = create<NotificationsState>()(
           set({ isSyncing: false });
         }
       },
-      
+
       mergeServerNotifications: (serverNotifications) => {
         set((state) => {
           const localIds = new Set(state.notifications.map((n) => n.id));
           const newFromServer = serverNotifications.filter((n) => !localIds.has(n.id));
           return {
             notifications: [...newFromServer, ...state.notifications].slice(0, 100),
-            unreadCount: state.unreadCount + newFromServer.filter((n) => n.status !== 'read').length,
+            unreadCount:
+              state.unreadCount + newFromServer.filter((n) => n.status !== 'read').length,
           };
         });
       },
-      
+
       // UI Actions
       openCenter: () => set({ isCenterOpen: true }),
       closeCenter: () => set({ isCenterOpen: false }),
       setPermissionRequested: (requested) => set({ isPermissionRequested: requested }),
-      
+
       // Processar notificações em fila
       processQueuedNotifications: () => {
         const queued = JSON.parse(localStorage.getItem('notification_queue') || '[]');
         if (queued.length === 0) return;
-        
+
         const { preferences, addNotification } = get();
         if (preferences.quietHours.enabled && isInQuietHours(preferences.quietHours)) {
           return; // Ainda em horário de silêncio
         }
-        
+
         const processed: NotificationPayload[] = [];
         for (const item of queued) {
           addNotification(item);
           processed.push(item);
         }
-        
+
         // Remover processados da fila
         const remaining = queued.filter((item: NotificationPayload) => !processed.includes(item));
         localStorage.setItem('notification_queue', JSON.stringify(remaining));
       },
-      
+
       // Helper para trigger de toast
       triggerToast: (notification: NotificationPayload) => {
         const { preferences } = get();
-        
+
         // Usar a duração configurada pelo usuário ou o padrão baseado em prioridade
-        const defaultDuration = notification.priority === 'urgent' ? 10000 : 
-                               notification.priority === 'high' ? 7000 : 5000;
-        const userDuration = preferences.autoDismissing 
-          ? preferences.autoDismissDelay * 1000 
+        const defaultDuration =
+          notification.priority === 'urgent'
+            ? 10000
+            : notification.priority === 'high'
+              ? 7000
+              : 5000;
+        const userDuration = preferences.autoDismissing
+          ? preferences.autoDismissDelay * 1000
           : defaultDuration;
-        
+
         if (typeof window !== 'undefined') {
           const event = new CustomEvent('app-toast', {
             detail: {
               title: notification.title,
               message: notification.message,
-              type: notification.priority === 'urgent' ? 'error' : 
-                    notification.priority === 'high' ? 'warning' : 'info',
+              type:
+                notification.priority === 'urgent'
+                  ? 'error'
+                  : notification.priority === 'high'
+                    ? 'warning'
+                    : 'info',
               duration: userDuration,
               action: notification.actions?.[0],
             },
@@ -486,29 +485,29 @@ export const useNotificationsStore = create<NotificationsState>()(
 // Helper functions
 function isInQuietHours(quietHours: typeof DEFAULT_NOTIFICATION_PREFERENCES.quietHours): boolean {
   if (!quietHours.enabled) return false;
-  
+
   const now = new Date();
   const { startTime, endTime, excludeWeekends } = quietHours;
-  
+
   // Verificar fins de semana
   if (excludeWeekends && (now.getDay() === 0 || now.getDay() === 6)) {
     return false;
   }
-  
+
   const [startHour, startMinute] = startTime.split(':').map(Number);
   const [endHour, endMinute] = endTime.split(':').map(Number);
-  
+
   const start = new Date(now);
   start.setHours(startHour, startMinute, 0, 0);
-  
+
   const end = new Date(now);
   end.setHours(endHour, endMinute, 0, 0);
-  
+
   // Se horário cruza meia-noite
   if (startTime > endTime) {
     return now >= start || now <= end;
   }
-  
+
   return now >= start && now <= end;
 }
 
@@ -530,7 +529,7 @@ function getCategoryDailyLimit(category: NotificationCategory): number {
 export const notificationSelectors = {
   unreadCount: (state: NotificationsState) => state.unreadCount,
   notifications: (state: NotificationsState) => state.notifications,
-  unreadNotifications: (state: NotificationsState) => 
+  unreadNotifications: (state: NotificationsState) =>
     state.notifications.filter((n) => n.status !== 'read'),
   byCategory: (category: NotificationCategory) => (state: NotificationsState) =>
     state.notifications.filter((n) => n.category === category),

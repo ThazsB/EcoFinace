@@ -3,9 +3,9 @@
  */
 
 export { NotificationCenter } from './NotificationCenter';
-export { 
-  ToastContainer, 
-  useToast, 
+export {
+  ToastContainer,
+  useToast,
   notify,
   useTransactionToast,
   useGoalToast,

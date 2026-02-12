@@ -4,15 +4,7 @@
  */
 
 import React, { useState, useEffect, useCallback } from 'react';
-import {
-  X,
-  AlertTriangle,
-  Trash2,
-  TrendingUp,
-  TrendingDown,
-  Target,
-  Wallet,
-} from 'lucide-react';
+import { X, AlertTriangle, Trash2, TrendingUp, TrendingDown, Target, Wallet } from 'lucide-react';
 
 // Tipos de confirmação
 export type ConfirmType = 'transaction' | 'goal' | 'budget' | 'generic';
@@ -172,19 +164,12 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
       >
         {/* Header */}
         <div className="flex items-start gap-4 mb-4">
-          <div className={`p-3 rounded-full ${config.iconBg}`}>
-            {config.icon}
-          </div>
+          <div className={`p-3 rounded-full ${config.iconBg}`}>{config.icon}</div>
           <div className="flex-1">
-            <h2
-              id="confirm-dialog-title"
-              className="text-xl font-semibold text-foreground"
-            >
+            <h2 id="confirm-dialog-title" className="text-xl font-semibold text-foreground">
               {config.title}
             </h2>
-            <p className="text-sm text-muted-foreground mt-1">
-              {message}
-            </p>
+            <p className="text-sm text-muted-foreground mt-1">{message}</p>
           </div>
           <button
             onClick={handleCancel}
@@ -202,18 +187,11 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
         {details.length > 0 && (
           <div className="mb-6 p-4 bg-muted/50 rounded-lg space-y-3">
             {details.map((detail, index) => (
-              <div
-                key={index}
-                className="flex items-center justify-between"
-              >
-                <span className="text-sm text-muted-foreground">
-                  {detail.label}
-                </span>
+              <div key={index} className="flex items-center justify-between">
+                <span className="text-sm text-muted-foreground">{detail.label}</span>
                 <div className="flex items-center gap-2">
                   {detail.icon}
-                  <span className="text-sm font-medium text-foreground">
-                    {detail.value}
-                  </span>
+                  <span className="text-sm font-medium text-foreground">{detail.value}</span>
                 </div>
               </div>
             ))}
@@ -225,9 +203,7 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
           <div className="mb-6 p-3 bg-yellow-500/10 border border-yellow-500/30 rounded-lg">
             <div className="flex items-center gap-2">
               <AlertTriangle className="w-4 h-4 text-yellow-500 flex-shrink-0" />
-              <p className="text-sm text-yellow-500">
-                Esta ação não pode ser desfeita.
-              </p>
+              <p className="text-sm text-yellow-500">Esta ação não pode ser desfeita.</p>
             </div>
           </div>
         )}

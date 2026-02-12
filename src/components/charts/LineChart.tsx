@@ -10,15 +10,7 @@ import {
   Legend,
 } from 'chart.js';
 
-ChartJS.register(
-  CategoryScale,
-  LinearScale,
-  PointElement,
-  LineElement,
-  Title,
-  Tooltip,
-  Legend
-);
+ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend);
 
 interface LineChartData {
   month: string;
@@ -32,11 +24,11 @@ interface LineChartProps {
 
 export function LineChart({ data }: LineChartProps) {
   const chartData = {
-    labels: data.map(item => item.month),
+    labels: data.map((item) => item.month),
     datasets: [
       {
         label: 'Receitas',
-        data: data.map(item => item.income),
+        data: data.map((item) => item.income),
         borderColor: '#34d399',
         tension: 0.4,
         backgroundColor: 'transparent',
@@ -49,7 +41,7 @@ export function LineChart({ data }: LineChartProps) {
       },
       {
         label: 'Despesas',
-        data: data.map(item => item.expense),
+        data: data.map((item) => item.expense),
         borderColor: '#F4A261',
         tension: 0.4,
         backgroundColor: 'transparent',

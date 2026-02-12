@@ -73,12 +73,8 @@ export class ErrorBoundary extends Component<Props, State> {
 
               {this.state.error && (
                 <details className="text-sm bg-muted/50 rounded p-3">
-                  <summary className="cursor-pointer font-medium">
-                    Ver detalhes do erro
-                  </summary>
-                  <pre className="mt-2 overflow-auto text-xs">
-                    {this.state.error.message}
-                  </pre>
+                  <summary className="cursor-pointer font-medium">Ver detalhes do erro</summary>
+                  <pre className="mt-2 overflow-auto text-xs">{this.state.error.message}</pre>
                 </details>
               )}
 

@@ -19,11 +19,11 @@ export function LoginScreen() {
   const [error, setError] = useState<'none' | 'invalid' | 'empty'>('none');
   const [errorMessage, setErrorMessage] = useState('');
   const [isAuthenticating, setIsAuthenticating] = useState(false);
-  
+
   // Estados para exclusão
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [profileToDelete, setProfileToDelete] = useState<string | null>(null);
-  
+
   const { user, login } = useAuthStore();
   const hasLoaded = useRef(false);
   const lastActivityCache = useRef<Map<string, number>>(new Map());
@@ -32,7 +32,7 @@ export function LoginScreen() {
   useEffect(() => {
     if (hasLoaded.current) return;
     hasLoaded.current = true;
-    
+
     try {
       const savedProfiles = localStorage.getItem('ecofinance_profiles');
       if (savedProfiles) {
@@ -57,17 +57,20 @@ export function LoginScreen() {
   }, [user]);
 
   // Callback functions
-  const handleSelectProfile = useCallback((profileId: string) => {
-    const profile = profiles.find(p => p.id === profileId);
-    if (profile) {
-      setSelectedProfileId(profileId);
-      setSelectedProfile(profile);
-      setView('password');
-      setPassword('');
-      setError('none');
-      setErrorMessage('');
-    }
-  }, [profiles]);
+  const handleSelectProfile = useCallback(
+    (profileId: string) => {
+      const profile = profiles.find((p) => p.id === profileId);
+      if (profile) {
+        setSelectedProfileId(profileId);
+        setSelectedProfile(profile);
+        setView('password');
+        setPassword('');
+        setError('none');
+        setErrorMessage('');
+      }
+    },
+    [profiles]
+  );
 
   const handleBackToProfiles = useCallback(() => {
     setSelectedProfileId(null);
@@ -80,7 +83,7 @@ export function LoginScreen() {
 
   const handleLogin = useCallback(async () => {
     if (!selectedProfile) return;
-    
+
     if (!password.trim()) {
       setError('empty');
       setErrorMessage('Por favor, digite sua senha');
@@ -92,47 +95,50 @@ export function LoginScreen() {
     setErrorMessage('');
 
     const success = await login(selectedProfile.id, password);
-    
+
     if (!success) {
       setError('invalid');
       setErrorMessage('Senha incorreta. Tente novamente.');
       setPassword('');
     }
-    
+
     setIsAuthenticating(false);
   }, [password, selectedProfile, login]);
 
-  const handleConfirmDelete = useCallback(async (_password: string): Promise<boolean> => {
-    if (!profileToDelete) return false;
-    
-    const updatedProfiles = profiles.filter(p => p.id !== profileToDelete);
-    setProfiles(updatedProfiles);
-    localStorage.setItem('ecofinance_profiles', JSON.stringify(updatedProfiles));
-    
-    // Limpar dados do perfil excluído
-    localStorage.removeItem(`ecofinance_${profileToDelete}_password`);
-    localStorage.removeItem(`ecofinance_${profileToDelete}_transactions`);
-    
-    // Se era o perfil selecionado, voltar para lista
-    if (selectedProfileId === profileToDelete) {
-      handleBackToProfiles();
-    }
-    
-    setShowDeleteModal(false);
-    setProfileToDelete(null);
-    return true;
-  }, [profileToDelete, profiles, selectedProfileId, handleBackToProfiles]);
+  const handleConfirmDelete = useCallback(
+    async (_password: string): Promise<boolean> => {
+      if (!profileToDelete) return false;
+
+      const updatedProfiles = profiles.filter((p) => p.id !== profileToDelete);
+      setProfiles(updatedProfiles);
+      localStorage.setItem('ecofinance_profiles', JSON.stringify(updatedProfiles));
+
+      // Limpar dados do perfil excluído
+      localStorage.removeItem(`ecofinance_${profileToDelete}_password`);
+      localStorage.removeItem(`ecofinance_${profileToDelete}_transactions`);
+
+      // Se era o perfil selecionado, voltar para lista
+      if (selectedProfileId === profileToDelete) {
+        handleBackToProfiles();
+      }
+
+      setShowDeleteModal(false);
+      setProfileToDelete(null);
+      return true;
+    },
+    [profileToDelete, profiles, selectedProfileId, handleBackToProfiles]
+  );
 
   // Obter perfil a ser excluído
-  const profileToDeleteData = profileToDelete 
-    ? profiles.find(p => p.id === profileToDelete) 
+  const profileToDeleteData = profileToDelete
+    ? profiles.find((p) => p.id === profileToDelete)
     : null;
 
   // Obter último perfil acessado
   const lastAccessedProfile = useMemo(() => {
     const activeProfileId = localStorage.getItem('ecofinance_active_profile');
     if (activeProfileId) {
-      return profiles.find(p => p.id === activeProfileId) || null;
+      return profiles.find((p) => p.id === activeProfileId) || null;
     }
     return null;
   }, [profiles]);
@@ -140,13 +146,13 @@ export function LoginScreen() {
   // Memoizar ordenação dos perfis para evitar re-renderizações desnecessárias
   const sortedProfiles = useMemo(() => {
     // Preencher cache se ainda não existe
-    profiles.forEach(profile => {
+    profiles.forEach((profile) => {
       if (!lastActivityCache.current.has(profile.id)) {
         const lastActivity = localStorage.getItem(`ecofinance_${profile.id}_lastActivity`);
         lastActivityCache.current.set(profile.id, parseInt(lastActivity || '0'));
       }
     });
-    
+
     return [...profiles].sort((a, b) => {
       const lastActivityA = lastActivityCache.current.get(a.id) || 0;
       const lastActivityB = lastActivityCache.current.get(b.id) || 0;
@@ -155,8 +161,12 @@ export function LoginScreen() {
   }, [profiles]);
 
   return (
-    <div 
-      className={view === 'first-access' ? 'h-screen overflow-hidden bg-neutral-950' : 'h-screen bg-gradient-to-br from-neutral-900 via-neutral-800 to-orange-900/20 flex items-center justify-center p-6 relative overflow-hidden'}
+    <div
+      className={
+        view === 'first-access'
+          ? 'h-screen overflow-hidden bg-neutral-950'
+          : 'h-screen bg-gradient-to-br from-neutral-900 via-neutral-800 to-orange-900/20 flex items-center justify-center p-6 relative overflow-hidden'
+      }
     >
       {view === 'first-access' ? (
         <FirstAccessScreen
@@ -173,7 +183,7 @@ export function LoginScreen() {
             <div className="absolute bottom-1/3 right-1/3 w-80 h-80 bg-orange-600/5 rounded-full blur-3xl" />
           </div>
           <div className="absolute inset-0 bg-gradient-to-t from-neutral-950/60 via-transparent to-neutral-950/30" />
-          
+
           <div className="relative z-10 w-full flex flex-col items-center">
             <div className="w-full max-w-4xl flex flex-col items-center">
               {/* Header */}
@@ -201,9 +211,9 @@ export function LoginScreen() {
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, y: -20 }}
-                    transition={{ 
+                    transition={{
                       duration: 0.25,
-                      ease: 'easeOut'
+                      ease: 'easeOut',
                     }}
                     className="mb-8"
                   >
@@ -212,11 +222,11 @@ export function LoginScreen() {
                       <motion.div
                         initial={{ scale: 0, rotate: -10 }}
                         animate={{ scale: 1, rotate: 0 }}
-                        transition={{ 
+                        transition={{
                           type: 'spring',
                           stiffness: 500,
                           damping: 15,
-                          delay: 0
+                          delay: 0,
                         }}
                         className="text-center"
                       >
@@ -225,7 +235,11 @@ export function LoginScreen() {
                           style={{ backgroundColor: `${selectedProfile.color}20` }}
                         >
                           {selectedProfile.avatar.startsWith('data:image/') ? (
-                            <img src={selectedProfile.avatar} alt="" className="w-full h-full object-cover" />
+                            <img
+                              src={selectedProfile.avatar}
+                              alt=""
+                              className="w-full h-full object-cover"
+                            />
                           ) : (
                             selectedProfile.avatar
                           )}
@@ -304,11 +318,11 @@ export function LoginScreen() {
                     initial={{ opacity: 0, y: 40, scale: 0.95 }}
                     animate={{ opacity: 1, y: 0, scale: 1 }}
                     exit={{ opacity: 0, y: -20, scale: 0.95 }}
-                    transition={{ 
+                    transition={{
                       type: 'spring',
                       stiffness: 400,
                       damping: 20,
-                      mass: 0.8
+                      mass: 0.8,
                     }}
                     className="w-full"
                   >
@@ -321,7 +335,18 @@ export function LoginScreen() {
                         className="mb-6"
                       >
                         <div className="flex items-center gap-2 text-sm text-muted-foreground mb-3">
-                          <svg className="w-4 h-4" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <svg
+                            className="w-4 h-4"
+                            xmlns="http://www.w3.org/2000/svg"
+                            width="24"
+                            height="24"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="2"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                          >
                             <circle cx="12" cy="12" r="10" />
                             <polyline points="12 6 12 12 16 14" />
                           </svg>
@@ -338,16 +363,33 @@ export function LoginScreen() {
                             style={{ backgroundColor: `${lastAccessedProfile.color}20` }}
                           >
                             {lastAccessedProfile.avatar.startsWith('data:image/') ? (
-                              <img src={lastAccessedProfile.avatar} alt="" className="w-full h-full object-cover" />
+                              <img
+                                src={lastAccessedProfile.avatar}
+                                alt=""
+                                className="w-full h-full object-cover"
+                              />
                             ) : (
                               lastAccessedProfile.avatar
                             )}
                           </div>
                           <div className="flex-1 text-left">
-                            <p className="font-medium text-foreground">{lastAccessedProfile.name}</p>
+                            <p className="font-medium text-foreground">
+                              {lastAccessedProfile.name}
+                            </p>
                             <p className="text-xs text-muted-foreground">Clique para acessar</p>
                           </div>
-                          <svg className="w-5 h-5 text-muted-foreground" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <svg
+                            className="w-5 h-5 text-muted-foreground"
+                            xmlns="http://www.w3.org/2000/svg"
+                            width="24"
+                            height="24"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="2"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                          >
                             <path d="M5 12h14" />
                             <path d="m12 5 7 7-7 7" />
                           </svg>
@@ -356,17 +398,19 @@ export function LoginScreen() {
                     )}
 
                     {/* Lista de perfis */}
-                    <div className={`grid gap-4 mb-8 ${sortedProfiles.length === 0 ? 'grid-cols-1' : 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3'} ${sortedProfiles.length === 0 ? 'max-w-sm mx-auto' : ''}`}>
+                    <div
+                      className={`grid gap-4 mb-8 ${sortedProfiles.length === 0 ? 'grid-cols-1' : 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3'} ${sortedProfiles.length === 0 ? 'max-w-sm mx-auto' : ''}`}
+                    >
                       {sortedProfiles.map((profile, index) => (
                         <motion.div
                           key={profile.id}
                           initial={{ opacity: 0, y: 20 }}
                           animate={{ opacity: 1, y: 0 }}
-                          transition={{ 
+                          transition={{
                             type: 'spring',
                             stiffness: 400,
                             damping: 20,
-                            delay: index * 0.05
+                            delay: index * 0.05,
                           }}
                         >
                           <ProfileCard
@@ -388,16 +432,27 @@ export function LoginScreen() {
                         exit={{ opacity: 0, y: -15 }}
                         whileHover={{ scale: 1.02, y: -2 }}
                         whileTap={{ scale: 0.98 }}
-                        transition={{ 
+                        transition={{
                           duration: 0.3,
                           ease: 'easeOut',
-                          delay: sortedProfiles.length * 0.05
+                          delay: sortedProfiles.length * 0.05,
                         }}
                         onClick={() => setView('first-access')}
                         className="flex flex-col items-center justify-center p-6 rounded-2xl border-2 border-dashed border-border hover:border-primary/50 hover:bg-muted/50 transition-all group"
                       >
                         <div className="w-14 h-14 rounded-full bg-primary/10 flex items-center justify-center mb-3 group-hover:bg-primary/20 transition-colors">
-                          <svg className="w-6 h-6 text-primary" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <svg
+                            className="w-6 h-6 text-primary"
+                            xmlns="http://www.w3.org/2000/svg"
+                            width="24"
+                            height="24"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="2"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                          >
                             <path d="M5 12h14" />
                             <path d="M12 5v14" />
                           </svg>
@@ -405,9 +460,7 @@ export function LoginScreen() {
                         <span className="font-medium group-hover:text-primary transition-colors text-sm">
                           Criar Novo
                         </span>
-                        <span className="text-xs text-muted-foreground mt-1">
-                          Adicionar perfil
-                        </span>
+                        <span className="text-xs text-muted-foreground mt-1">Adicionar perfil</span>
                       </motion.button>
                     </div>
                   </motion.div>

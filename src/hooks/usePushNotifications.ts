@@ -1,6 +1,6 @@
 /**
  * Hook para gerenciar Push Notifications usando Web Push API
- * 
+ *
  * Suporta notificações nativas no navegador e dispositivos móveis
  */
 
@@ -26,7 +26,8 @@ export function usePushNotifications() {
   // Verificar suporte e permissão atual
   useEffect(() => {
     const checkSupport = async () => {
-      const supported = 'Notification' in window && 'serviceWorker' in navigator && 'PushManager' in window;
+      const supported =
+        'Notification' in window && 'serviceWorker' in navigator && 'PushManager' in window;
       setIsSupported(supported);
 
       if (supported) {
@@ -61,7 +62,7 @@ export function usePushNotifications() {
       const registration = await navigator.serviceWorker.register(SW_PATH, {
         scope: '/',
       });
-      
+
       console.log('Service Worker registrado:', registration);
       return registration;
     } catch (error) {
@@ -84,8 +85,8 @@ export function usePushNotifications() {
       }
 
       // Verificar assinatura existente
-      let existingSubscription = await registration.pushManager.getSubscription();
-      
+      const existingSubscription = await registration.pushManager.getSubscription();
+
       if (existingSubscription) {
         setSubscription(existingSubscription);
         setIsLoading(false);
@@ -101,10 +102,10 @@ export function usePushNotifications() {
         });
 
         setSubscription(newSubscription);
-        
+
         // Enviar assinatura para o servidor
         await sendSubscriptionToServer(newSubscription);
-        
+
         setIsLoading(false);
         return newSubscription;
       }
@@ -127,13 +128,13 @@ export function usePushNotifications() {
     setIsLoading(true);
     try {
       const result = await subscription.unsubscribe();
-      
+
       if (result) {
         setSubscription(null);
         // Remover do servidor
         await removeSubscriptionFromServer(subscription);
       }
-      
+
       setIsLoading(false);
       return result;
     } catch (error) {
@@ -144,46 +145,48 @@ export function usePushNotifications() {
   }, [subscription]);
 
   // Enviar notificação local
-  const showLocalNotification = useCallback((
-    title: string,
-    options?: NotificationOptions & { body?: string; icon?: string; data?: any }
-  ): Notification | null => {
-    if (!isSupported || permission !== 'granted') {
-      console.warn('Notificações não suportadas ou permissão negada');
-      return null;
-    }
+  const showLocalNotification = useCallback(
+    (
+      title: string,
+      options?: NotificationOptions & { body?: string; icon?: string; data?: any }
+    ): Notification | null => {
+      if (!isSupported || permission !== 'granted') {
+        console.warn('Notificações não suportadas ou permissão negada');
+        return null;
+      }
 
-    try {
-      const notification = new Notification(title, {
-        ...options,
-      });
+      try {
+        const notification = new Notification(title, {
+          ...options,
+        });
 
-      notification.onclick = () => {
-        window.focus();
-        notification.close();
-      };
+        notification.onclick = () => {
+          window.focus();
+          notification.close();
+        };
 
-      return notification;
-    } catch (error) {
-      console.error('Erro ao mostrar notificação:', error);
-      return null;
-    }
-  }, [isSupported, permission]);
+        return notification;
+      } catch (error) {
+        console.error('Erro ao mostrar notificação:', error);
+        return null;
+      }
+    },
+    [isSupported, permission]
+  );
 
   // Mostrar toast no app (fallback quando notificações nativas não estão disponíveis)
-  const showAppToast = useCallback((
-    title: string,
-    message: string,
-    type: 'info' | 'success' | 'warning' | 'error' = 'info'
-  ) => {
-    // Disparar evento customizado que pode ser ouvido pelo componente Toast
-    if (typeof window !== 'undefined') {
-      const event = new CustomEvent('app-toast', {
-        detail: { title, message, type, timestamp: Date.now() }
-      });
-      window.dispatchEvent(event);
-    }
-  }, []);
+  const showAppToast = useCallback(
+    (title: string, message: string, type: 'info' | 'success' | 'warning' | 'error' = 'info') => {
+      // Disparar evento customizado que pode ser ouvido pelo componente Toast
+      if (typeof window !== 'undefined') {
+        const event = new CustomEvent('app-toast', {
+          detail: { title, message, type, timestamp: Date.now() },
+        });
+        window.dispatchEvent(event);
+      }
+    },
+    []
+  );
 
   return {
     permission,
@@ -205,7 +208,9 @@ export function useNotificationSync(profileId: string | null) {
   const [isSyncing, setIsSyncing] = useState(false);
   const [lastSync, setLastSync] = useState<Date | null>(null);
   const [syncError, setSyncError] = useState<string | null>(null);
-  const [isOnline, setIsOnline] = useState(typeof navigator !== 'undefined' ? navigator.onLine : true);
+  const [isOnline, setIsOnline] = useState(
+    typeof navigator !== 'undefined' ? navigator.onLine : true
+  );
 
   // Monitorar status de conexão
   useEffect(() => {
@@ -237,41 +242,47 @@ export function useNotificationSync(profileId: string | null) {
   }, [profileId]);
 
   // Sincronizar notificações
-  const syncNotifications = useCallback(async (localNotifications: any[]): Promise<any[]> => {
-    if (!isSupabaseConfigured() || !isOnline || !profileId) {
-      console.log('Supabase não configurado ou offline - usando apenas dados locais');
-      return localNotifications;
-    }
+  const syncNotifications = useCallback(
+    async (localNotifications: any[]): Promise<any[]> => {
+      if (!isSupabaseConfigured() || !isOnline || !profileId) {
+        console.log('Supabase não configurado ou offline - usando apenas dados locais');
+        return localNotifications;
+      }
 
-    setIsSyncing(true);
-    setSyncError(null);
+      setIsSyncing(true);
+      setSyncError(null);
 
-    try {
-      const synced = await supabaseClient.syncNotifications(localNotifications);
-      setLastSync(new Date());
-      setIsSyncing(false);
-      return synced;
-    } catch (error) {
-      console.error('Erro na sincronização:', error);
-      setSyncError(error instanceof Error ? error.message : 'Erro na sincronização');
-      setIsSyncing(false);
-      return localNotifications;
-    }
-  }, [profileId, isOnline]);
+      try {
+        const synced = await supabaseClient.syncNotifications(localNotifications);
+        setLastSync(new Date());
+        setIsSyncing(false);
+        return synced;
+      } catch (error) {
+        console.error('Erro na sincronização:', error);
+        setSyncError(error instanceof Error ? error.message : 'Erro na sincronização');
+        setIsSyncing(false);
+        return localNotifications;
+      }
+    },
+    [profileId, isOnline]
+  );
 
   // Fazer backup
-  const backupNotifications = useCallback(async (notifications: any[]): Promise<boolean> => {
-    if (!isSupabaseConfigured() || !isOnline || !profileId) {
-      return false;
-    }
+  const backupNotifications = useCallback(
+    async (notifications: any[]): Promise<boolean> => {
+      if (!isSupabaseConfigured() || !isOnline || !profileId) {
+        return false;
+      }
 
-    try {
-      return await supabaseClient.backupNotifications(notifications);
-    } catch (error) {
-      console.error('Erro no backup:', error);
-      return false;
-    }
-  }, [profileId, isOnline]);
+      try {
+        return await supabaseClient.backupNotifications(notifications);
+      } catch (error) {
+        console.error('Erro no backup:', error);
+        return false;
+      }
+    },
+    [profileId, isOnline]
+  );
 
   // Restaurar
   const restoreNotifications = useCallback(async (): Promise<any[]> => {
@@ -319,19 +330,22 @@ export function useDeviceSessions(profileId: string | null) {
     }
   }, [profileId]);
 
-  const removeDevice = useCallback(async (_deviceId: string) => {
-    if (!profileId || !isSupabaseConfigured()) return false;
+  const removeDevice = useCallback(
+    async (_deviceId: string) => {
+      if (!profileId || !isSupabaseConfigured()) return false;
 
-    try {
-      // Remover do Supabase (apenas o próprio dispositivo pode se remover)
-      await supabaseClient.removeCurrentDevice();
-      await fetchDevices();
-      return true;
-    } catch (error) {
-      console.error('Erro ao remover dispositivo:', error);
-      return false;
-    }
-  }, [profileId, fetchDevices]);
+      try {
+        // Remover do Supabase (apenas o próprio dispositivo pode se remover)
+        await supabaseClient.removeCurrentDevice();
+        await fetchDevices();
+        return true;
+      } catch (error) {
+        console.error('Erro ao remover dispositivo:', error);
+        return false;
+      }
+    },
+    [profileId, fetchDevices]
+  );
 
   useEffect(() => {
     fetchDevices();
@@ -350,9 +364,7 @@ export function useDeviceSessions(profileId: string | null) {
  */
 function urlBase64ToUint8Array(base64String: string): Uint8Array {
   const padding = '='.repeat((4 - (base64String.length % 4)) % 4);
-  const base64 = (base64String + padding)
-    .replace(/-/g, '+')
-    .replace(/_/g, '/');
+  const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
 
   const rawData = window.atob(base64);
   const outputArray = new Uint8Array(rawData.length);

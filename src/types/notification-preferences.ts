@@ -2,7 +2,11 @@
  * Preferências padrão de notificação para novos usuários
  */
 
-import type { NotificationPreferences, NotificationChannel, NotificationCategory } from './notifications';
+import type {
+  NotificationPreferences,
+  NotificationChannel,
+  NotificationCategory,
+} from './notifications';
 
 export const DEFAULT_NOTIFICATION_PREFERENCES: NotificationPreferences = {
   userId: '',
@@ -80,7 +84,11 @@ export const DEFAULT_NOTIFICATION_PREFERENCES: NotificationPreferences = {
     frequency: 'weekly',
     dayOfWeek: 1, // Segunda-feira
     time: '09:00',
-    includeCategories: ['budget' as NotificationCategory, 'goal' as NotificationCategory, 'insight' as NotificationCategory],
+    includeCategories: [
+      'budget' as NotificationCategory,
+      'goal' as NotificationCategory,
+      'insight' as NotificationCategory,
+    ],
   },
   privacy: {
     hideAmounts: false,
@@ -95,13 +103,13 @@ export const DEFAULT_NOTIFICATION_PREFERENCES: NotificationPreferences = {
 export const NOTIFICATION_LIMITS = {
   // Máximo de notificações armazenadas localmente
   maxLocalNotifications: 100,
-  
+
   // Máximo de notificações por sincronização
   maxSyncBatchSize: 50,
-  
+
   // Tempo máximo de retenção (30 dias)
   retentionDays: 30,
-  
+
   // Limites por categoria por dia
   dailyLimits: {
     budget: 20,
@@ -113,7 +121,7 @@ export const NOTIFICATION_LIMITS = {
     insight: 5,
     achievement: 2,
   },
-  
+
   // Cooldowns mínimos (minutos)
   minCooldowns: {
     budget: 30,

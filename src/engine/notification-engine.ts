@@ -26,6 +26,7 @@ interface BudgetStatus {
   category: string;
   spent: number;
   limit: number;
+  percentage: number;
 }
 
 interface GoalStatus {
@@ -33,6 +34,7 @@ interface GoalStatus {
   name: string;
   current: number;
   target: number;
+  percentage: number;
 }
 
 interface TransactionStatus {
@@ -40,11 +42,18 @@ interface TransactionStatus {
   amount: number;
   category: string;
   date: string;
+  type: 'income' | 'expense';
 }
 
 interface UserProfile {
   id: string;
   name: string;
+}
+
+interface DashboardInsight {
+  type: 'spending_spike' | 'savings_opportunity' | 'budget_warning' | 'goal_milestone';
+  message: string;
+  severity: 'low' | 'medium' | 'high';
 }
 
 /**
@@ -120,7 +129,8 @@ export class NotificationEngine {
             type: 'create_notification',
             notification: {
               title: 'Orçamento Estourado!',
-              message: 'Você ultrapassou o limite de {{category}}. Gasto: {{spent}}, Limite: {{limit}}',
+              message:
+                'Você ultrapassou o limite de {{category}}. Gasto: {{spent}}, Limite: {{limit}}',
               category: 'budget',
               priority: 'urgent',
               channels: ['in_app', 'push'],
@@ -269,10 +279,7 @@ export class NotificationEngine {
           // Gerar notificações das ações
           for (const action of rule.actions) {
             if (action.type === 'create_notification') {
-              const notification = this.buildNotification(
-                action,
-                this.context
-              );
+              const notification = this.buildNotification(action, this.context);
               notifications.push(notification);
               this.updateCooldown(rule);
             }
@@ -285,13 +292,17 @@ export class NotificationEngine {
 
     // Adicionar notificações ao store (removendo duplicatas primeiro)
     const uniqueNotifications = notifications.filter((notification, index, self) => {
-      return index === self.findIndex(n => 
-        n.title === notification.title && 
-        n.message === notification.message &&
-        n.category === notification.category
+      return (
+        index ===
+        self.findIndex(
+          (n) =>
+            n.title === notification.title &&
+            n.message === notification.message &&
+            n.category === notification.category
+        )
       );
     });
-    
+
     uniqueNotifications.forEach((n) => store.addNotification(n));
 
     return uniqueNotifications;
@@ -300,10 +311,7 @@ export class NotificationEngine {
   /**
    * Avaliar se regra é satisfeita
    */
-  private async evaluateRule(
-    rule: NotificationRule,
-    context: RuleContext
-  ): Promise<boolean> {
+  private async evaluateRule(rule: NotificationRule, context: RuleContext): Promise<boolean> {
     // Todas as condições devem ser verdadeiras
     for (const condition of rule.conditions) {
       if (!(await this.evaluateCondition(condition, context))) {
@@ -323,11 +331,7 @@ export class NotificationEngine {
     switch (condition.type) {
       case 'threshold': {
         const value = this.getNestedValue(context, condition.field);
-        return this.compareValues(
-          Number(value) || 0,
-          condition.operator,
-          condition.value
-        );
+        return this.compareValues(Number(value) || 0, condition.operator, condition.value);
       }
 
       case 'percentage': {
@@ -345,7 +349,7 @@ export class NotificationEngine {
       case 'date': {
         const now = context.date || new Date();
         const dayName = now.toLocaleDateString('en-US', { weekday: 'long' });
-        
+
         if (condition.value === 'monday' && dayName === 'Monday') {
           return true;
         }
@@ -369,11 +373,7 @@ export class NotificationEngine {
   /**
    * Comparar valores
    */
-  private compareValues(
-    a: number,
-    operator: string,
-    b: number
-  ): boolean {
+  private compareValues(a: number, operator: string, b: number): boolean {
     switch (operator) {
       case 'gt':
         return a > b;
@@ -415,21 +415,18 @@ export class NotificationEngine {
   /**
    * Construir notificação
    */
-  private buildNotification(
-    action: RuleAction,
-    context: RuleContext
-  ): NotificationPayload {
+  private buildNotification(action: RuleAction, context: RuleContext): NotificationPayload {
     const notification = action.notification;
 
     // Interpolação de variáveis
     const title = this.interpolate(notification.title || '', context);
-    
+
     // Para mensagens de orçamento, expandir variáveis
     let message = notification.message || '';
-    
+
     // Verificar se budgets existe e é um array
     let budgetsArray: BudgetStatus[] = [];
-    
+
     if (context.budgets) {
       if (typeof context.budgets === 'string') {
         try {
@@ -441,24 +438,37 @@ export class NotificationEngine {
         budgetsArray = context.budgets;
       }
     }
-    
+
     if (notification.category === 'budget' && budgetsArray.length > 0) {
       const budgetMessages: string[] = [];
-      
+
       for (const budget of budgetsArray) {
         let msg = message;
-        
+
         // Simple string replacement
         msg = msg.split('{{category}}').join(String(budget.category));
-        msg = msg.split('{{spent}}').join(new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(Number(budget.spent)));
-        msg = msg.split('{{limit}}').join(new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(Number(budget.limit)));
-        
-        const percent = budget.limit > 0 ? Math.round((Number(budget.spent) / Number(budget.limit)) * 100) : 0;
+        msg = msg
+          .split('{{spent}}')
+          .join(
+            new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(
+              Number(budget.spent)
+            )
+          );
+        msg = msg
+          .split('{{limit}}')
+          .join(
+            new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(
+              Number(budget.limit)
+            )
+          );
+
+        const percent =
+          budget.limit > 0 ? Math.round((Number(budget.spent) / Number(budget.limit)) * 100) : 0;
         msg = msg.split('{{percent}}').join(String(percent));
-        
+
         budgetMessages.push(msg);
       }
-      
+
       message = budgetMessages.join('\n');
     } else {
       message = this.interpolate(message, context);
@@ -497,8 +507,7 @@ export class NotificationEngine {
   private updateCooldown(rule: NotificationRule): void {
     localStorage.setItem(`rule_${rule.id}_lastRun`, Date.now().toString());
 
-    const count =
-      parseInt(localStorage.getItem(`rule_${rule.id}_count`) || '0') + 1;
+    const count = parseInt(localStorage.getItem(`rule_${rule.id}_count`) || '0') + 1;
     localStorage.setItem(`rule_${rule.id}_count`, String(count));
 
     // Atualizar contador na regra
@@ -522,15 +531,21 @@ export function getNotificationEngine(): NotificationEngine {
 export function useNotificationEngine() {
   const engine = getNotificationEngine();
 
-  const checkBudgetAlerts = useCallback((budgets: BudgetStatus[]) => {
-    engine.setContext({ budgets });
-    engine.processRules();
-  }, [engine]);
+  const checkBudgetAlerts = useCallback(
+    (budgets: BudgetStatus[]) => {
+      engine.setContext({ budgets });
+      engine.processRules();
+    },
+    [engine]
+  );
 
-  const checkGoalAlerts = useCallback((goals: GoalStatus[]) => {
-    engine.setContext({ goals });
-    engine.processRules();
-  }, [engine]);
+  const checkGoalAlerts = useCallback(
+    (goals: GoalStatus[]) => {
+      engine.setContext({ goals });
+      engine.processRules();
+    },
+    [engine]
+  );
 
   return {
     checkBudgetAlerts,

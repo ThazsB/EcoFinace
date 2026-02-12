@@ -4,13 +4,13 @@
  */
 
 import React, { useState, useMemo } from 'react';
-import { 
-  Plus, 
-  Search, 
-  Filter, 
-  Star, 
-  Edit2, 
-  Trash2, 
+import {
+  Plus,
+  Search,
+  Filter,
+  Star,
+  Edit2,
+  Trash2,
   GripVertical,
   X,
   Check,
@@ -19,7 +19,7 @@ import {
   ArrowUpDown,
   LayoutGrid,
   List,
-  Settings
+  Settings,
 } from 'lucide-react';
 import { useCategoriesStore, useFilteredCategories } from '@/stores/categoriesStore';
 import { useAppStore } from '@/stores/appStore';
@@ -35,7 +35,7 @@ import { showDeletionToast, DELETION_ELEMENTS } from '@/utils/deletion-toast';
 type SortOption = 'name' | 'usage' | 'type' | 'custom';
 
 export const CategoriesManager: React.FC = () => {
-  const { 
+  const {
     categories,
     addCategory,
     updateCategory,
@@ -89,7 +89,10 @@ export const CategoriesManager: React.FC = () => {
 
   // Inicializar categories também no appStore (para sincronizar selects que usam appStore)
   React.useEffect(() => {
-    const profileId = localStorage.getItem('ecofinance_active_profile') || localStorage.getItem('fins_active_profile') || 'default';
+    const profileId =
+      localStorage.getItem('ecofinance_active_profile') ||
+      localStorage.getItem('fins_active_profile') ||
+      'default';
     try {
       const appInit = useAppStore.getState().init;
       if (appInit) appInit(profileId);
@@ -114,18 +117,18 @@ export const CategoriesManager: React.FC = () => {
     // Aplicar busca
     if (searchQuery) {
       const query = searchQuery.toLowerCase();
-      result = result.filter(c => c.name.toLowerCase().includes(query));
+      result = result.filter((c) => c.name.toLowerCase().includes(query));
     }
 
     // Aplicar filtros
     if (filterType !== 'all') {
-      result = result.filter(c => c.type === filterType);
+      result = result.filter((c) => c.type === filterType);
     }
     if (showFavoritesOnly) {
-      result = result.filter(c => c.isFavorite);
+      result = result.filter((c) => c.isFavorite);
     }
     if (showSystemOnly) {
-      result = result.filter(c => c.isSystem);
+      result = result.filter((c) => c.isSystem);
     }
 
     // Aplicar ordenação
@@ -198,7 +201,7 @@ export const CategoriesManager: React.FC = () => {
 
     // Verificar duplicata
     const existing = categories.find(
-      c => c.name.toLowerCase() === formData.name.toLowerCase() && c.id !== editingCategory?.id
+      (c) => c.name.toLowerCase() === formData.name.toLowerCase() && c.id !== editingCategory?.id
     );
     if (existing) {
       errors.name = `Já existe uma categoria chamada "${existing.name}"`;
@@ -218,7 +221,11 @@ export const CategoriesManager: React.FC = () => {
           type: 'success',
         });
         // sincronizar com appStore (apenas nome)
-        try { useAppStore.getState().addCategory(formData.name); } catch (e) { /* noop */ }
+        try {
+          useAppStore.getState().addCategory(formData.name);
+        } catch (e) {
+          /* noop */
+        }
         setIsModalOpen(false);
       } else {
         showToast({
@@ -237,7 +244,11 @@ export const CategoriesManager: React.FC = () => {
         });
         // Se o nome mudou, sincronizar com appStore
         if (editingCategory.name !== formData.name) {
-          try { useAppStore.getState().editCategory(editingCategory.name, formData.name); } catch (e) { /* noop */ }
+          try {
+            useAppStore.getState().editCategory(editingCategory.name, formData.name);
+          } catch (e) {
+            /* noop */
+          }
         }
         setIsModalOpen(false);
       } else {
@@ -256,13 +267,12 @@ export const CategoriesManager: React.FC = () => {
 
     const result = await deleteCategory(categoryToDelete.id, migrateTo);
     if (result.success) {
-      showDeletionToast(
-        showToast,
-        DELETION_ELEMENTS.CATEGORY,
-        categoryToDelete.name,
-        true
-      );
-      try { useAppStore.getState().deleteCategory(categoryToDelete.name); } catch (e) { /* noop */ }
+      showDeletionToast(showToast, DELETION_ELEMENTS.CATEGORY, categoryToDelete.name, true);
+      try {
+        useAppStore.getState().deleteCategory(categoryToDelete.name);
+      } catch (e) {
+        /* noop */
+      }
     } else {
       showDeletionToast(
         showToast,
@@ -286,7 +296,11 @@ export const CategoriesManager: React.FC = () => {
         type: 'success',
       });
       // sincronizar cópia com appStore
-      try { useAppStore.getState().addCategory(`${category.name} (cópia)`); } catch (e) { /* noop */ }
+      try {
+        useAppStore.getState().addCategory(`${category.name} (cópia)`);
+      } catch (e) {
+        /* noop */
+      }
     } else {
       showToast({
         title: 'Erro',
@@ -298,27 +312,25 @@ export const CategoriesManager: React.FC = () => {
 
   // Renderizar ícone da categoria
   const renderCategoryIcon = (iconId: string, color: string, size: number = 20) => {
-    const iconData = CATEGORY_ICONS.find(i => i.id === iconId);
+    const iconData = CATEGORY_ICONS.find((i) => i.id === iconId);
     const IconComponent = iconData?.component;
-    
+
     return (
-      <div 
+      <div
         className="flex items-center justify-center rounded-full"
-        style={{ 
-          width: size + 16, 
-          height: size + 16, 
-          backgroundColor: `${color}20` 
+        style={{
+          width: size + 16,
+          height: size + 16,
+          backgroundColor: `${color}20`,
         }}
       >
         {IconComponent ? (
-          <IconComponent 
-            size={size} 
-            style={{ color }} 
-            className="lucide-icon"
-          />
+          <IconComponent size={size} style={{ color }} className="lucide-icon" />
         ) : (
           // Fallback se ícone não encontrado
-          <span className="text-sm" style={{ color }}>?</span>
+          <span className="text-sm" style={{ color }}>
+            ?
+          </span>
         )}
       </div>
     );
@@ -330,9 +342,7 @@ export const CategoriesManager: React.FC = () => {
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
         <div>
           <h2 className="text-xl font-semibold text-foreground">Categorias</h2>
-          <p className="text-sm text-muted-foreground">
-            Gerencie suas categorias de transações
-          </p>
+          <p className="text-sm text-muted-foreground">Gerencie suas categorias de transações</p>
         </div>
         <button
           onClick={handleOpenCreate}
@@ -346,7 +356,10 @@ export const CategoriesManager: React.FC = () => {
       {/* Search and Filters */}
       <div className="flex flex-col md:flex-row gap-4 mb-6">
         <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground" size={20} />
+          <Search
+            className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground"
+            size={20}
+          />
           <input
             type="text"
             placeholder="Buscar categorias..."
@@ -404,7 +417,9 @@ export const CategoriesManager: React.FC = () => {
                 <button
                   onClick={() => setFilterType('expense')}
                   className={`px-3 py-1 rounded-lg text-sm ${
-                    filterType === 'expense' ? 'bg-primary text-primary-foreground' : 'bg-background'
+                    filterType === 'expense'
+                      ? 'bg-primary text-primary-foreground'
+                      : 'bg-background'
                   }`}
                 >
                   Despesas
@@ -445,12 +460,14 @@ export const CategoriesManager: React.FC = () => {
           >
             {/* Icon */}
             {renderCategoryIcon(category.icon, category.color)}
-            
+
             {/* Info */}
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2">
                 <h3 className="font-medium truncate">{category.name}</h3>
-                {category.isFavorite && <Star size={14} className="text-yellow-500 fill-yellow-500" />}
+                {category.isFavorite && (
+                  <Star size={14} className="text-yellow-500 fill-yellow-500" />
+                )}
                 {category.isSystem && (
                   <span className="text-xs px-2 py-0.5 bg-muted text-muted-foreground rounded">
                     Sistema
@@ -458,7 +475,11 @@ export const CategoriesManager: React.FC = () => {
                 )}
               </div>
               <p className="text-sm text-muted-foreground">
-                {category.type === 'income' ? 'Receita' : category.type === 'expense' ? 'Despesa' : 'Transferência'}
+                {category.type === 'income'
+                  ? 'Receita'
+                  : category.type === 'expense'
+                    ? 'Despesa'
+                    : 'Transferência'}
               </p>
             </div>
 
@@ -469,11 +490,17 @@ export const CategoriesManager: React.FC = () => {
                   <button
                     onClick={() => toggleFavorite(category.id)}
                     className="p-2 hover:bg-accent rounded-lg transition-colors"
-                    title={category.isFavorite ? 'Remover dos favoritos' : 'Adicionar aos favoritos'}
+                    title={
+                      category.isFavorite ? 'Remover dos favoritos' : 'Adicionar aos favoritos'
+                    }
                   >
-                    <Star 
-                      size={18} 
-                      className={category.isFavorite ? 'text-yellow-500 fill-yellow-500' : 'text-muted-foreground'} 
+                    <Star
+                      size={18}
+                      className={
+                        category.isFavorite
+                          ? 'text-yellow-500 fill-yellow-500'
+                          : 'text-muted-foreground'
+                      }
                     />
                   </button>
                   <button
@@ -510,7 +537,9 @@ export const CategoriesManager: React.FC = () => {
           <Folder size={48} className="mx-auto text-muted-foreground mb-4" />
           <h3 className="text-lg font-medium mb-2">Nenhuma categoria encontrada</h3>
           <p className="text-muted-foreground mb-4">
-            {searchQuery ? 'Tente uma busca diferente' : 'Crie sua primeira categoria personalizada'}
+            {searchQuery
+              ? 'Tente uma busca diferente'
+              : 'Crie sua primeira categoria personalizada'}
           </p>
           {!searchQuery && (
             <button
@@ -551,12 +580,12 @@ export const CategoriesManager: React.FC = () => {
                   onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                   placeholder="Ex: Alimentação"
                   className={`w-full px-3 py-2 bg-background border rounded-lg focus:outline-none focus:ring-2 ${
-                    formErrors.name ? 'border-red-500 focus:ring-red-500' : 'border-border focus:ring-primary'
+                    formErrors.name
+                      ? 'border-red-500 focus:ring-red-500'
+                      : 'border-border focus:ring-primary'
                   }`}
                 />
-                {formErrors.name && (
-                  <p className="text-sm text-red-500 mt-1">{formErrors.name}</p>
-                )}
+                {formErrors.name && <p className="text-sm text-red-500 mt-1">{formErrors.name}</p>}
               </div>
 
               {/* Type */}
@@ -612,7 +641,14 @@ export const CategoriesManager: React.FC = () => {
                   onChange={(e) => setFormData({ ...formData, isFavorite: e.target.checked })}
                   className="rounded border-border"
                 />
-                <Star size={16} className={formData.isFavorite ? 'text-yellow-500 fill-yellow-500' : 'text-muted-foreground'} />
+                <Star
+                  size={16}
+                  className={
+                    formData.isFavorite
+                      ? 'text-yellow-500 fill-yellow-500'
+                      : 'text-muted-foreground'
+                  }
+                />
                 <span>Adicionar aos favoritos</span>
               </label>
             </div>
@@ -655,11 +691,9 @@ export const CategoriesManager: React.FC = () => {
                 Tem certeza que deseja excluir a categoria "{categoryToDelete.name}"?
               </p>
             </div>
-            
+
             <div>
-              <label className="block text-sm font-medium mb-2">
-                Migrar transações para:
-              </label>
+              <label className="block text-sm font-medium mb-2">Migrar transações para:</label>
               <select
                 value={migrateTo}
                 onChange={(e) => setMigrateTo(e.target.value)}
@@ -667,9 +701,11 @@ export const CategoriesManager: React.FC = () => {
               >
                 <option value="Outros">Outros</option>
                 {categories
-                  .filter(c => c.id !== categoryToDelete.id && !c.isSystem)
-                  .map(c => (
-                    <option key={c.id} value={c.name}>{c.name}</option>
+                  .filter((c) => c.id !== categoryToDelete.id && !c.isSystem)
+                  .map((c) => (
+                    <option key={c.id} value={c.name}>
+                      {c.name}
+                    </option>
                   ))}
               </select>
             </div>

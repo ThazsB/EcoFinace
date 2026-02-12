@@ -17,31 +17,31 @@ export interface Profile {
 export interface ProfileSecurity {
   // Método de autenticação
   authMethod: 'password' | 'pin';
-  
+
   // Configurações de PIN (se aplicável)
   pinLength?: number; // 4 ou 6 dígitos
-  
+
   // Tentativas máxima antes de bloquear
   maxLoginAttempts?: number; // padrão: 5
-  
+
   // Contador de tentativas falhadas
   failedAttempts?: number;
-  
+
   // Timestamp do último bloqueio (se aplicável)
   lockedUntil?: string;
 }
 
 // Estados do fluxo de autenticação
-export type AuthStep = 
-  | 'idle'                    // Idle inicial
-  | 'profile-selected'        // Perfil selecionado, mostrando senha
-  | 'authenticating'          // Processando login
-  | 'success'                 // Login ok
-  | 'error'                   // Senha incorreta
-  | 'first-access';           // Primeiro acesso - criar perfil
+export type AuthStep =
+  | 'idle' // Idle inicial
+  | 'profile-selected' // Perfil selecionado, mostrando senha
+  | 'authenticating' // Processando login
+  | 'success' // Login ok
+  | 'error' // Senha incorreta
+  | 'first-access'; // Primeiro acesso - criar perfil
 
 // Tipos de erro de autenticação
-export type AuthErrorType = 
+export type AuthErrorType =
   | 'none'
   | 'invalid-password'
   | 'profile-not-found'
@@ -82,15 +82,15 @@ export type NotificationCategory = 'financeira' | 'lembrete' | 'relatorio' | 'si
 /**
  * Tipos de insight financeiro
  */
-export type InsightType = 
-  | 'spending_pattern'    // Padrão de gastos
-  | 'budget_warning'      // Alerta de orçamento
-  | 'saving_opportunity'  // Oportunidade de economia
-  | 'income_analysis'     // Análise de receitas
-  | 'trend_alert'         // Alerta de tendência
-  | 'anomaly_detected'    // Anomalia detectada
-  | 'goal_progress'       // Progresso de meta
-  | 'monthly_summary';    // Resumo mensal
+export type InsightType =
+  | 'spending_pattern' // Padrão de gastos
+  | 'budget_warning' // Alerta de orçamento
+  | 'saving_opportunity' // Oportunidade de economia
+  | 'income_analysis' // Análise de receitas
+  | 'trend_alert' // Alerta de tendência
+  | 'anomaly_detected' // Anomalia detectada
+  | 'goal_progress' // Progresso de meta
+  | 'monthly_summary'; // Resumo mensal
 
 /**
  * Insight financeiro personalizado
@@ -141,12 +141,54 @@ export interface PredictiveData {
 }
 
 export const AVAILABLE_AVATARS = [
-  '👤', '👨', '👩', '🧑', '👨‍💼', '👩‍💼', '👨‍🎓', '👩‍🎓',
-  '👨‍💻', '👩‍💻', '👨‍🔬', '👩‍🔬', '👨‍🎨', '👩‍🎨', '👨‍🍳', '👩‍🍳',
-  '🦸', '🦹', '🧙', '🧚', '🧛', '🧜', '🧝', '🧞',
-  '🐶', '🐱', '🐭', '🐹', '🐰', '🦊', '🐻', '🐼',
-  '🐨', '🐯', '🦁', '🐮', '🐷', '🐸', '🐵', '🐔',
-  '🦄', '🦋', '🐝', '🐞', '🦖', '🦕', '🐙', '🦑'
+  '👤',
+  '👨',
+  '👩',
+  '🧑',
+  '👨‍💼',
+  '👩‍💼',
+  '👨‍🎓',
+  '👩‍🎓',
+  '👨‍💻',
+  '👩‍💻',
+  '👨‍🔬',
+  '👩‍🔬',
+  '👨‍🎨',
+  '👩‍🎨',
+  '👨‍🍳',
+  '👩‍🍳',
+  '🦸',
+  '🦹',
+  '🧙',
+  '🧚',
+  '🧛',
+  '🧜',
+  '🧝',
+  '🧞',
+  '🐶',
+  '🐱',
+  '🐭',
+  '🐹',
+  '🐰',
+  '🦊',
+  '🐻',
+  '🐼',
+  '🐨',
+  '🐯',
+  '🦁',
+  '🐮',
+  '🐷',
+  '🐸',
+  '🐵',
+  '🐔',
+  '🦄',
+  '🦋',
+  '🐝',
+  '🐞',
+  '🦖',
+  '🦕',
+  '🐙',
+  '🦑',
 ];
 
 export const AVAILABLE_COLORS = [
@@ -159,10 +201,21 @@ export const AVAILABLE_COLORS = [
   { name: 'Ciano', value: '#06B6D4', light: '#22D3EE' },
   { name: 'Vermelho', value: '#EF4444', light: '#F87171' },
   { name: 'Índigo', value: '#6366F1', light: '#818CF8' },
-  { name: 'Esmeralda', value: '#10B981', light: '#34D399' }
+  { name: 'Esmeralda', value: '#10B981', light: '#34D399' },
 ];
 
-export const DEFAULT_CATEGORIES = ['Alimentação', 'Moradia', 'Transporte', 'Lazer', 'Saúde', 'Salário', 'Investimentos', 'Educação', 'Viagem', 'Outros'];
+export const DEFAULT_CATEGORIES = [
+  'Alimentação',
+  'Moradia',
+  'Transporte',
+  'Lazer',
+  'Saúde',
+  'Salário',
+  'Investimentos',
+  'Educação',
+  'Viagem',
+  'Outros',
+];
 
 /**
  * Valor Fixo Anualizado

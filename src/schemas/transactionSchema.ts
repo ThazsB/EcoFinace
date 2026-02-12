@@ -15,7 +15,7 @@ export const TransactionSchema = z.object({
     .min(1, 'A descrição é obrigatória')
     .max(200, 'A descrição deve ter no máximo 200 caracteres')
     .trim(),
-  
+
   amount: z
     .string()
     .min(1, 'O valor é obrigatório')
@@ -23,20 +23,15 @@ export const TransactionSchema = z.object({
       (val) => !isNaN(parseFloat(val)) && parseFloat(val) > 0,
       'O valor deve ser maior que zero'
     ),
-  
+
   type: TransactionTypeEnum,
-  
-  category: z
-    .string()
-    .min(1, 'A categoria é obrigatória'),
-  
+
+  category: z.string().min(1, 'A categoria é obrigatória'),
+
   date: z
     .string()
     .min(1, 'A data é obrigatória')
-    .refine(
-      (val) => !isNaN(Date.parse(val)),
-      'Data inválida'
-    ),
+    .refine((val) => !isNaN(Date.parse(val)), 'Data inválida'),
 });
 
 // Schema para criar transação

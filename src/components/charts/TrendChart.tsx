@@ -16,8 +16,8 @@ export function TrendChart({
   height = 300,
 }: TrendChartProps) {
   const maxValue = useMemo(() => {
-    const maxIncome = Math.max(...data.map(d => d.income));
-    const maxExpense = Math.max(...data.map(d => d.expense));
+    const maxIncome = Math.max(...data.map((d) => d.income));
+    const maxExpense = Math.max(...data.map((d) => d.expense));
     return Math.max(maxIncome, maxExpense);
   }, [data]);
 
@@ -34,13 +34,11 @@ export function TrendChart({
   const totalIncome = useMemo(() => data.reduce((sum, d) => sum + d.income, 0), [data]);
   const totalExpense = useMemo(() => data.reduce((sum, d) => sum + d.expense, 0), [data]);
   const netBalance = totalIncome - totalExpense;
-  const trendPercentage = totalIncome > 0 ? ((netBalance / totalIncome) * 100) : 0;
+  const trendPercentage = totalIncome > 0 ? (netBalance / totalIncome) * 100 : 0;
 
   return (
     <div className="bg-card rounded-xl border border-border p-6">
-      {title && (
-        <h3 className="text-lg font-semibold mb-4">{title}</h3>
-      )}
+      {title && <h3 className="text-lg font-semibold mb-4">{title}</h3>}
 
       {/* Summary */}
       <div className="flex items-center gap-6 mb-6">
@@ -60,7 +58,9 @@ export function TrendChart({
         ) : (
           <div className="ml-auto flex items-center gap-2 text-red-500">
             <TrendingDown size={18} />
-            <span className="font-semibold">-R$ {Math.abs(netBalance).toLocaleString('pt-BR')}</span>
+            <span className="font-semibold">
+              -R$ {Math.abs(netBalance).toLocaleString('pt-BR')}
+            </span>
           </div>
         )}
       </div>
@@ -121,10 +121,16 @@ export function TrendChart({
         <div className="mt-4 pt-4 border-t border-border">
           <div className="flex justify-between text-sm">
             <span className="text-muted-foreground">
-              Total Receitas: <span className="text-emerald-500 font-medium">R$ {totalIncome.toLocaleString('pt-BR')}</span>
+              Total Receitas:{' '}
+              <span className="text-emerald-500 font-medium">
+                R$ {totalIncome.toLocaleString('pt-BR')}
+              </span>
             </span>
             <span className="text-muted-foreground">
-              Total Despesas: <span className="text-red-500 font-medium">R$ {totalExpense.toLocaleString('pt-BR')}</span>
+              Total Despesas:{' '}
+              <span className="text-red-500 font-medium">
+                R$ {totalExpense.toLocaleString('pt-BR')}
+              </span>
             </span>
           </div>
         </div>

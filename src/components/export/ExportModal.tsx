@@ -26,16 +26,14 @@ interface ExportModalProps {
   profileName: string;
 }
 
-export function ExportModal({
-  isOpen,
-  onClose,
-  data,
-  profileName,
-}: ExportModalProps) {
+export function ExportModal({ isOpen, onClose, data, profileName }: ExportModalProps) {
   const { showToast } = useToast();
   const [exporting, setExporting] = useState<string | null>(null);
 
-  const handleExport = async (type: 'csv' | 'json' | 'pdf' | 'all', format: 'transactions' | 'budgets' | 'goals' | 'all') => {
+  const handleExport = async (
+    type: 'csv' | 'json' | 'pdf' | 'all',
+    format: 'transactions' | 'budgets' | 'goals' | 'all'
+  ) => {
     setExporting(`${type}-${format}`);
 
     try {
@@ -97,10 +95,7 @@ export function ExportModal({
   return (
     <>
       {/* Backdrop */}
-      <div
-        className="fixed inset-0 bg-black/60 z-40 backdrop-blur-sm"
-        onClick={onClose}
-      />
+      <div className="fixed inset-0 bg-black/60 z-40 backdrop-blur-sm" onClick={onClose} />
 
       {/* Modal */}
       <div className="fixed right-0 top-0 h-full w-full max-w-md bg-card border-l border-border shadow-2xl z-50 flex flex-col animate-slide-in-right">

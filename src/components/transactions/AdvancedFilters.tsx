@@ -52,7 +52,7 @@ export function AdvancedFilters({
         if (startDate && endDate) {
           start = new Date(startDate);
           const end = new Date(endDate);
-          filtered = filtered.filter(t => {
+          filtered = filtered.filter((t) => {
             const date = new Date(t.date);
             return date >= start! && date <= end;
           });
@@ -61,38 +61,48 @@ export function AdvancedFilters({
     }
 
     if (start && period !== 'custom') {
-      filtered = filtered.filter(t => new Date(t.date) >= start!);
+      filtered = filtered.filter((t) => new Date(t.date) >= start!);
     }
 
     // Filtro por categorias
     if (selectedCategories.length > 0) {
-      filtered = filtered.filter(t => selectedCategories.includes(t.category));
+      filtered = filtered.filter((t) => selectedCategories.includes(t.category));
     }
 
     // Filtro por tipo
     if (transactionTypes.length > 0) {
-      filtered = filtered.filter(t => transactionTypes.includes(t.type));
+      filtered = filtered.filter((t) => transactionTypes.includes(t.type));
     }
 
     // Filtro por valor
     if (minAmount) {
-      filtered = filtered.filter(t => t.amount >= parseFloat(minAmount));
+      filtered = filtered.filter((t) => t.amount >= parseFloat(minAmount));
     }
     if (maxAmount) {
-      filtered = filtered.filter(t => t.amount <= parseFloat(maxAmount));
+      filtered = filtered.filter((t) => t.amount <= parseFloat(maxAmount));
     }
 
     // Filtro por busca
     if (searchTerm) {
       const term = searchTerm.toLowerCase();
-      filtered = filtered.filter(t =>
-        t.desc.toLowerCase().includes(term) ||
-        t.category.toLowerCase().includes(term)
+      filtered = filtered.filter(
+        (t) => t.desc.toLowerCase().includes(term) || t.category.toLowerCase().includes(term)
       );
     }
 
     onFilter(filtered);
-  }, [transactions, period, selectedCategories, transactionTypes, minAmount, maxAmount, searchTerm, startDate, endDate, onFilter]);
+  }, [
+    transactions,
+    period,
+    selectedCategories,
+    transactionTypes,
+    minAmount,
+    maxAmount,
+    searchTerm,
+    startDate,
+    endDate,
+    onFilter,
+  ]);
 
   const resetFilters = () => {
     setPeriod('30d');
@@ -107,22 +117,18 @@ export function AdvancedFilters({
   };
 
   const toggleCategory = (category: string) => {
-    setSelectedCategories(prev =>
-      prev.includes(category)
-        ? prev.filter(c => c !== category)
-        : [...prev, category]
+    setSelectedCategories((prev) =>
+      prev.includes(category) ? prev.filter((c) => c !== category) : [...prev, category]
     );
   };
 
   const toggleType = (type: 'income' | 'expense') => {
-    setTransactionTypes(prev =>
-      prev.includes(type)
-        ? prev.filter(t => t !== type)
-        : [...prev, type]
+    setTransactionTypes((prev) =>
+      prev.includes(type) ? prev.filter((t) => t !== type) : [...prev, type]
     );
   };
 
-  const activeFiltersCount = 
+  const activeFiltersCount =
     (period !== '30d' ? 1 : 0) +
     selectedCategories.length +
     transactionTypes.length +
@@ -151,10 +157,7 @@ export function AdvancedFilters({
 
       {isOpen && (
         <>
-          <div
-            className="fixed inset-0 z-10"
-            onClick={() => setIsOpen(false)}
-          />
+          <div className="fixed inset-0 z-10" onClick={() => setIsOpen(false)} />
           <div className="absolute right-0 top-full mt-2 w-96 bg-card border border-border rounded-xl shadow-xl z-20 overflow-hidden">
             <div className="p-4 border-b border-border">
               <div className="flex items-center justify-between mb-3">
@@ -205,7 +208,13 @@ export function AdvancedFilters({
                           : 'bg-muted hover:bg-muted/80 border-transparent'
                       }`}
                     >
-                      {p === '7d' ? '7 dias' : p === '30d' ? '30 dias' : p === '90d' ? '3 meses' : '1 ano'}
+                      {p === '7d'
+                        ? '7 dias'
+                        : p === '30d'
+                          ? '30 dias'
+                          : p === '90d'
+                            ? '3 meses'
+                            : '1 ano'}
                     </button>
                   ))}
                   <button
@@ -299,7 +308,9 @@ export function AdvancedFilters({
                 </label>
                 <div className="grid grid-cols-2 gap-2">
                   <div className="relative">
-                    <span className="absolute left-2 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">R$</span>
+                    <span className="absolute left-2 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">
+                      R$
+                    </span>
                     <input
                       type="number"
                       placeholder="Mín"
@@ -309,7 +320,9 @@ export function AdvancedFilters({
                     />
                   </div>
                   <div className="relative">
-                    <span className="absolute left-2 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">R$</span>
+                    <span className="absolute left-2 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">
+                      R$
+                    </span>
                     <input
                       type="number"
                       placeholder="Máx"

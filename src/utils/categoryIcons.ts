@@ -8,91 +8,92 @@ import { CATEGORY_ICONS as LUCIDE_ICONS } from '@/types/categories';
 // Mapeamento de categorias para ícones da biblioteca LUCIDE_ICONS
 export const CATEGORY_ICONS: Record<string, string> = {
   // Receitas
-  'Salário': 'wallet',
-  'Investimentos': 'piggy-bank',
-  'Freelance': 'briefcase',
+  Salário: 'wallet',
+  Investimentos: 'piggy-bank',
+  Freelance: 'briefcase',
   'Renda Extra': 'banknote',
-  'Dividendos': 'trending-up',
-  'Aposentadoria': 'banknote',
-  'Presente': 'gift',
+  Dividendos: 'trending-up',
+  Aposentadoria: 'banknote',
+  Presente: 'gift',
 
   // Despesas - Alimentação
-  'Alimentação': 'utensils',
-  'Restaurante': 'utensils',
-  'Mercado': 'shopping-cart',
-  'Feira': 'shopping-cart',
-  'Lanchonete': 'coffee',
-  'Café': 'coffee',
-  'Bebidas': 'wine',
-  'Delivery': 'shopping-cart',
+  Alimentação: 'utensils',
+  Restaurante: 'utensils',
+  Mercado: 'shopping-cart',
+  Feira: 'shopping-cart',
+  Lanchonete: 'coffee',
+  Café: 'coffee',
+  Bebidas: 'wine',
+  Delivery: 'shopping-cart',
 
   // Despesas - Moradia
-  'Moradia': 'home',
-  'Aluguel': 'home',
-  'Condomínio': 'building',
-  'IPTU': 'home',
-  'Energia': 'lightbulb',
-  'Água': 'droplet',
-  'Gás': 'fuel',
-  'Internet': 'phone',
-  'Telefone': 'phone',
+  Moradia: 'home',
+  Aluguel: 'home',
+  Condomínio: 'building',
+  IPTU: 'home',
+  Energia: 'lightbulb',
+  Água: 'droplet',
+  Gás: 'fuel',
+  Internet: 'phone',
+  Telefone: 'phone',
   'TV a Cabo': 'phone',
-  'Manutenção': 'wrench',
+  Manutenção: 'wrench',
 
   // Despesas - Transporte
-  'Transporte': 'car',
-  'Combustível': 'fuel',
-  'Uber': 'car',
-  'Ônibus': 'bus',
-  'Metrô': 'train',
-  'Táxi': 'car',
-  'Estacionamento': 'car',
-  'Pedágio': 'car',
+  Transporte: 'car',
+  Combustível: 'fuel',
+  Gasolina: 'fuel',
+  Uber: 'car',
+  Ônibus: 'bus',
+  Metrô: 'train',
+  Táxi: 'car',
+  Estacionamento: 'car',
+  Pedágio: 'car',
 
   // Despesas - Lazer
-  'Lazer': 'film',
-  'Cinema': 'film',
-  'Jogos': 'gamepad',
-  'Séries': 'film',
-  'Música': 'music',
-  'Livros': 'book',
-  'Viagem': 'plane',
-  'Hotel': 'plane',
-  'Ingressos': 'film',
-  'Parque': 'trees',
-  'Bar': 'wine',
-  'Festa': 'film',
+  Lazer: 'film',
+  Cinema: 'film',
+  Jogos: 'gamepad',
+  Séries: 'film',
+  Música: 'music',
+  Livros: 'book',
+  Viagem: 'plane',
+  Hotel: 'plane',
+  Ingressos: 'film',
+  Parque: 'trees',
+  Bar: 'wine',
+  Festa: 'film',
 
   // Despesas - Saúde
-  'Saúde': 'heart-pulse',
-  'Farmácia': 'pill',
-  'Médico': 'stethoscope',
-  'Dentista': 'stethoscope',
-  'Academia': 'activity',
-  'Exames': 'stethoscope',
+  Saúde: 'heart-pulse',
+  Farmácia: 'pill',
+  Médico: 'stethoscope',
+  Dentista: 'stethoscope',
+  Academia: 'activity',
+  Exames: 'stethoscope',
   'Plano de Saúde': 'heart-pulse',
-  'Veterinário': 'paw-print',
+  Veterinário: 'paw-print',
 
   // Despesas - Educação
-  'Educação': 'graduation-cap',
-  'Curso': 'graduation-cap',
-  'Escola': 'school',
-  'Universidade': 'graduation-cap',
+  Educação: 'graduation-cap',
+  Curso: 'graduation-cap',
+  Escola: 'school',
+  Universidade: 'graduation-cap',
   'Material Escolar': 'book',
   'Curso Online': 'laptop',
-  'Workshop': 'graduation-cap',
+  Workshop: 'graduation-cap',
 
   // Despesas - Pessoal
-  'Compras': 'shopping-bag',
-  'Roupas': 'shopping-bag',
-  'Calçados': 'shopping-bag',
-  'Beleza': 'sparkles',
-  'Cabeleireiro': 'sparkles',
-  'Presentes': 'gift',
-  'Animais': 'paw-print',
-  'Eletrônicos': 'laptop',
-  'Criança': 'user',
-  'Outros': 'more-horizontal',
+  Compras: 'shopping-bag',
+  Roupas: 'shopping-bag',
+  Calçados: 'shopping-bag',
+  Beleza: 'sparkles',
+  Cabeleireiro: 'sparkles',
+  Presentes: 'gift',
+  Animais: 'paw-print',
+  Eletrônicos: 'laptop',
+  Criança: 'user',
+  Outros: 'more-horizontal',
 };
 
 // Exportar o mapeamento para uso em outras partes do app
@@ -103,7 +104,7 @@ export { CATEGORY_ICONS as CATEGORY_ICON_MAP };
  */
 export function getCategoryIcon(category: string) {
   if (!category) {
-    const fallbackIcon = LUCIDE_ICONS.find(icon => icon.id === 'more-horizontal');
+    const fallbackIcon = LUCIDE_ICONS.find((icon) => icon.id === 'more-horizontal');
     return fallbackIcon ? fallbackIcon.component : null;
   }
 
@@ -115,7 +116,7 @@ export function getCategoryIcon(category: string) {
   );
   if (directMatch) {
     const iconId = CATEGORY_ICONS[directMatch];
-    const iconData = LUCIDE_ICONS.find(icon => icon.id === iconId);
+    const iconData = LUCIDE_ICONS.find((icon) => icon.id === iconId);
     return iconData ? iconData.component : null;
   }
 
@@ -125,12 +126,12 @@ export function getCategoryIcon(category: string) {
   );
   if (keywordMatch) {
     const iconId = CATEGORY_ICONS[keywordMatch];
-    const iconData = LUCIDE_ICONS.find(icon => icon.id === iconId);
+    const iconData = LUCIDE_ICONS.find((icon) => icon.id === iconId);
     return iconData ? iconData.component : null;
   }
 
   // Fallback para ícone padrão
-  const fallbackIcon = LUCIDE_ICONS.find(icon => icon.id === 'more-horizontal');
+  const fallbackIcon = LUCIDE_ICONS.find((icon) => icon.id === 'more-horizontal');
   return fallbackIcon ? fallbackIcon.component : null;
 }
 
@@ -139,25 +140,25 @@ export function getCategoryIcon(category: string) {
  */
 export function getCategoryColor(category: string): string {
   const colors: Record<string, string> = {
-    'Salário': '#22C55E',
-    'Investimentos': '#14B8A6',
-    'Freelance': '#06B6D4',
-    'Alimentação': '#F97316',
-    'Moradia': '#EF4444',
-    'Transporte': '#6366F1',
-    'Lazer': '#A855F7',
-    'Saúde': '#EC4899',
-    'Educação': '#3B82F6',
-    'Compras': '#F59E0B',
-    'Viagem': '#06B6D4',
-    'Outros': '#6B7280',
+    Salário: '#22C55E',
+    Investimentos: '#14B8A6',
+    Freelance: '#06B6D4',
+    Alimentação: '#F97316',
+    Moradia: '#EF4444',
+    Transporte: '#6366F1',
+    Combustível: '#6366F1',
+    Gasolina: '#6366F1',
+    Lazer: '#A855F7',
+    Saúde: '#EC4899',
+    Educação: '#3B82F6',
+    Compras: '#F59E0B',
+    Viagem: '#06B6D4',
+    Outros: '#6B7280',
   };
 
   const normalizedCategory = category.toLowerCase();
 
-  const directMatch = Object.keys(colors).find(
-    (key) => key.toLowerCase() === normalizedCategory
-  );
+  const directMatch = Object.keys(colors).find((key) => key.toLowerCase() === normalizedCategory);
   if (directMatch) return colors[directMatch];
 
   const keywordMatch = Object.keys(colors).find((key) =>

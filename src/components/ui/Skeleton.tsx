@@ -7,11 +7,7 @@ interface SkeletonProps {
 }
 
 export function Skeleton({ className }: SkeletonProps) {
-  return (
-    <div
-      className={`animate-pulse rounded-md bg-muted ${className || ''}`}
-    />
-  );
+  return <div className={`animate-pulse rounded-md bg-muted ${className || ''}`} />;
 }
 
 export function CardSkeleton() {
@@ -36,13 +32,13 @@ export function CardSkeleton() {
 
 export function TableRowSkeleton() {
   return (
-    <div className="flex items-center gap-4 p-4 border-b border-border">
-      <Skeleton className="w-10 h-10 rounded-full" />
-      <div className="space-y-2 flex-1">
-        <Skeleton className="h-4 w-1/3" />
-        <Skeleton className="h-3 w-1/4" />
+    <div className="card-skeleton">
+      <div className="card-skeleton__icon" />
+      <div className="card-skeleton__content">
+        <div className="card-skeleton__title" />
+        <div className="card-skeleton__meta" />
       </div>
-      <Skeleton className="h-4 w-20" />
+      <div className="card-skeleton__amount" />
     </div>
   );
 }

@@ -4,19 +4,15 @@
 
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
-import type { 
-  Category, 
-  CategoryCreateData, 
-  CategoryUpdateData, 
+import type {
+  Category,
+  CategoryCreateData,
+  CategoryUpdateData,
   CategoryDeleteResult,
   CategoryFilters,
   CategorySortOption,
 } from '@/types/categories';
-import { 
-  DEFAULT_SYSTEM_CATEGORIES,
-  CATEGORY_ICONS,
-  CATEGORY_COLORS 
-} from '@/types/categories';
+import { DEFAULT_SYSTEM_CATEGORIES, CATEGORY_ICONS, CATEGORY_COLORS } from '@/types/categories';
 
 // Chave do localStorage
 const STORAGE_KEY = 'fins_categories';
@@ -28,26 +24,29 @@ interface CategoriesState {
   filters: CategoryFilters;
   sortBy: CategorySortOption;
   searchQuery: string;
-  
+
   // Actions - CRUD
   init: (profileId: string) => Promise<void>;
   addCategory: (data: CategoryCreateData) => Promise<{ success: boolean; error?: string }>;
-  updateCategory: (id: string, data: CategoryUpdateData) => Promise<{ success: boolean; error?: string }>;
+  updateCategory: (
+    id: string,
+    data: CategoryUpdateData
+  ) => Promise<{ success: boolean; error?: string }>;
   deleteCategory: (id: string, migrateTo?: string) => Promise<CategoryDeleteResult>;
   duplicateCategory: (id: string) => Promise<{ success: boolean; error?: string }>;
-  
+
   // Actions - Favoritos
   toggleFavorite: (id: string) => void;
-  
+
   // Actions - Ordenação
   reorderCategories: (fromIndex: number, toIndex: number) => void;
   setSortBy: (sort: CategorySortOption) => void;
-  
+
   // Actions - Filtros
   setFilters: (filters: Partial<CategoryFilters>) => void;
   setSearchQuery: (query: string) => void;
   clearFilters: () => void;
-  
+
   // Actions - Utils
   getCategoryById: (id: string) => Category | undefined;
   getCategoryByName: (name: string) => Category | undefined;
@@ -88,7 +87,7 @@ export const useCategoriesStore = create<CategoriesState>()(
       // Adicionar nova categoria
       addCategory: async (data: CategoryCreateData) => {
         const { name, type, icon, color, parentId, isFavorite } = data;
-        
+
         // Validar nome
         const validation = get().validateCategory(name);
         if (!validation.valid) {
@@ -110,20 +109,23 @@ export const useCategoriesStore = create<CategoriesState>()(
           updatedAt: new Date().toISOString(),
         };
 
-        set(state => ({
+        set((state) => ({
           categories: [...state.categories, newCategory],
         }));
 
         // Salvar no localStorage
         const { categories, customOrder } = get();
-        localStorage.setItem(`${STORAGE_KEY}_${profileId}`, JSON.stringify({ categories, customOrder }));
+        localStorage.setItem(
+          `${STORAGE_KEY}_${profileId}`,
+          JSON.stringify({ categories, customOrder })
+        );
 
         return { success: true };
       },
 
       // Atualizar categoria
       updateCategory: async (id: string, data: CategoryUpdateData) => {
-        const existing = get().categories.find(c => c.id === id);
+        const existing = get().categories.find((c) => c.id === id);
         if (!existing) {
           return { success: false, error: 'Categoria não encontrada' };
         }
@@ -138,53 +140,72 @@ export const useCategoriesStore = create<CategoriesState>()(
 
         const profileId = localStorage.getItem('fins_active_profile') || 'default';
 
-        set(state => ({
-          categories: state.categories.map(cat =>
-            cat.id === id
-              ? { ...cat, ...data, updatedAt: new Date().toISOString() }
-              : cat
+        set((state) => ({
+          categories: state.categories.map((cat) =>
+            cat.id === id ? { ...cat, ...data, updatedAt: new Date().toISOString() } : cat
           ),
         }));
 
         // Salvar no localStorage
         const { categories, customOrder } = get();
-        localStorage.setItem(`${STORAGE_KEY}_${profileId}`, JSON.stringify({ categories, customOrder }));
+        localStorage.setItem(
+          `${STORAGE_KEY}_${profileId}`,
+          JSON.stringify({ categories, customOrder })
+        );
 
         return { success: true };
       },
 
       // Excluir categoria
       deleteCategory: async (id: string, migrateTo?: string): Promise<CategoryDeleteResult> => {
-        const existing = get().categories.find(c => c.id === id);
+        const existing = get().categories.find((c) => c.id === id);
         if (!existing) {
-          return { success: false, migratedTransactions: 0, migratedBudgets: 0, message: 'Categoria não encontrada' };
+          return {
+            success: false,
+            migratedTransactions: 0,
+            migratedBudgets: 0,
+            message: 'Categoria não encontrada',
+          };
         }
 
         if (existing.isSystem) {
-          return { success: false, migratedTransactions: 0, migratedBudgets: 0, message: 'Categorias do sistema não podem ser excluídas' };
+          return {
+            success: false,
+            migratedTransactions: 0,
+            migratedBudgets: 0,
+            message: 'Categorias do sistema não podem ser excluídas',
+          };
         }
 
         const profileId = localStorage.getItem('fins_active_profile') || 'default';
 
         // Contar transações e orçamentos afetados
-        const transactions = JSON.parse(localStorage.getItem(`fins_${profileId}_transactions`) || '[]');
+        const transactions = JSON.parse(
+          localStorage.getItem(`fins_${profileId}_transactions`) || '[]'
+        );
         const budgets = JSON.parse(localStorage.getItem(`fins_${profileId}_budgets`) || '[]');
-        
-        const affectedTransactions = transactions.filter((t: { category: string }) => t.category === existing.name);
-        const affectedBudgets = budgets.filter((b: { category: string }) => b.category === existing.name);
+
+        const affectedTransactions = transactions.filter(
+          (t: { category: string }) => t.category === existing.name
+        );
+        const affectedBudgets = budgets.filter(
+          (b: { category: string }) => b.category === existing.name
+        );
 
         // Migrar transações
         const migrateCategory = migrateTo || 'Outros';
         const updatedTransactions = transactions.map((t: { category: string }) =>
           t.category === existing.name ? { ...t, category: migrateCategory } : t
         );
-        
+
         // Remover orçamentos
-        const updatedBudgets = budgets.filter((b: { category: string }) => b.category !== existing.name);
+        const updatedBudgets = budgets.filter(
+          (b: { category: string }) => b.category !== existing.name
+        );
 
         // Atualizar store
-        set(state => ({
-          categories: state.categories.filter(cat => cat.id !== id),
+        set((state) => ({
+          categories: state.categories.filter((cat) => cat.id !== id),
         }));
 
         // Salvar mudanças
@@ -192,7 +213,10 @@ export const useCategoriesStore = create<CategoriesState>()(
         localStorage.setItem(`fins_${profileId}_budgets`, JSON.stringify(updatedBudgets));
 
         const { categories, customOrder } = get();
-        localStorage.setItem(`${STORAGE_KEY}_${profileId}`, JSON.stringify({ categories, customOrder }));
+        localStorage.setItem(
+          `${STORAGE_KEY}_${profileId}`,
+          JSON.stringify({ categories, customOrder })
+        );
 
         return {
           success: true,
@@ -204,7 +228,7 @@ export const useCategoriesStore = create<CategoriesState>()(
 
       // Duplicar categoria
       duplicateCategory: async (id: string) => {
-        const existing = get().categories.find(c => c.id === id);
+        const existing = get().categories.find((c) => c.id === id);
         if (!existing) {
           return { success: false, error: 'Categoria não encontrada' };
         }
@@ -227,12 +251,15 @@ export const useCategoriesStore = create<CategoriesState>()(
           updatedAt: new Date().toISOString(),
         };
 
-        set(state => ({
+        set((state) => ({
           categories: [...state.categories, newCategory],
         }));
 
         const { categories, customOrder } = get();
-        localStorage.setItem(`${STORAGE_KEY}_${profileId}`, JSON.stringify({ categories, customOrder }));
+        localStorage.setItem(
+          `${STORAGE_KEY}_${profileId}`,
+          JSON.stringify({ categories, customOrder })
+        );
 
         return { success: true };
       },
@@ -241,21 +268,26 @@ export const useCategoriesStore = create<CategoriesState>()(
       toggleFavorite: (id: string) => {
         const profileId = localStorage.getItem('fins_active_profile') || 'default';
 
-        set(state => ({
-          categories: state.categories.map(cat =>
-            cat.id === id ? { ...cat, isFavorite: !cat.isFavorite, updatedAt: new Date().toISOString() } : cat
+        set((state) => ({
+          categories: state.categories.map((cat) =>
+            cat.id === id
+              ? { ...cat, isFavorite: !cat.isFavorite, updatedAt: new Date().toISOString() }
+              : cat
           ),
         }));
 
         const { categories, customOrder } = get();
-        localStorage.setItem(`${STORAGE_KEY}_${profileId}`, JSON.stringify({ categories, customOrder }));
+        localStorage.setItem(
+          `${STORAGE_KEY}_${profileId}`,
+          JSON.stringify({ categories, customOrder })
+        );
       },
 
       // Reordenar categorias
       reorderCategories: (fromIndex: number, toIndex: number) => {
         const { categories, customOrder } = get();
-        const categoryIds = categories.map(c => c.id);
-        
+        const categoryIds = categories.map((c) => c.id);
+
         // Mover no array
         const [removed] = categoryIds.splice(fromIndex, 1);
         categoryIds.splice(toIndex, 0, removed);
@@ -263,10 +295,13 @@ export const useCategoriesStore = create<CategoriesState>()(
         set({ customOrder: categoryIds });
 
         const profileId = localStorage.getItem('fins_active_profile') || 'default';
-        localStorage.setItem(`${STORAGE_KEY}_${profileId}`, JSON.stringify({ 
-          categories: get().categories, 
-          customOrder: categoryIds 
-        }));
+        localStorage.setItem(
+          `${STORAGE_KEY}_${profileId}`,
+          JSON.stringify({
+            categories: get().categories,
+            customOrder: categoryIds,
+          })
+        );
       },
 
       // Definir tipo de ordenação
@@ -276,7 +311,7 @@ export const useCategoriesStore = create<CategoriesState>()(
 
       // Definir filtros
       setFilters: (filters: Partial<CategoryFilters>) => {
-        set(state => ({ filters: { ...state.filters, ...filters } }));
+        set((state) => ({ filters: { ...state.filters, ...filters } }));
       },
 
       // Definir busca
@@ -291,35 +326,35 @@ export const useCategoriesStore = create<CategoriesState>()(
 
       // Utils
       getCategoryById: (id: string) => {
-        return get().categories.find(c => c.id === id);
+        return get().categories.find((c) => c.id === id);
       },
 
       getCategoryByName: (name: string) => {
-        return get().categories.find(c => c.name.toLowerCase() === name.toLowerCase());
+        return get().categories.find((c) => c.name.toLowerCase() === name.toLowerCase());
       },
 
       getCategoriesByType: (type: 'income' | 'expense' | 'transfer') => {
-        return get().categories.filter(c => c.type === type);
+        return get().categories.filter((c) => c.type === type);
       },
 
       getFavoriteCategories: () => {
-        return get().categories.filter(c => c.isFavorite);
+        return get().categories.filter((c) => c.isFavorite);
       },
 
       getSystemCategories: () => {
-        return get().categories.filter(c => c.isSystem);
+        return get().categories.filter((c) => c.isSystem);
       },
 
       getCustomCategories: () => {
-        return get().categories.filter(c => !c.isSystem);
+        return get().categories.filter((c) => !c.isSystem);
       },
 
       // Incrementar contador de uso
       incrementUsageCount: (categoryId: string) => {
         const profileId = localStorage.getItem('fins_active_profile') || 'default';
 
-        set(state => ({
-          categories: state.categories.map(cat =>
+        set((state) => ({
+          categories: state.categories.map((cat) =>
             cat.id === categoryId
               ? { ...cat, usageCount: cat.usageCount + 1, updatedAt: new Date().toISOString() }
               : cat
@@ -327,7 +362,10 @@ export const useCategoriesStore = create<CategoriesState>()(
         }));
 
         const { categories, customOrder } = get();
-        localStorage.setItem(`${STORAGE_KEY}_${profileId}`, JSON.stringify({ categories, customOrder }));
+        localStorage.setItem(
+          `${STORAGE_KEY}_${profileId}`,
+          JSON.stringify({ categories, customOrder })
+        );
       },
 
       // Validar categoria
@@ -345,7 +383,7 @@ export const useCategoriesStore = create<CategoriesState>()(
         }
 
         const existing = get().categories.find(
-          c => c.name.toLowerCase() === name.toLowerCase() && c.id !== excludeId
+          (c) => c.name.toLowerCase() === name.toLowerCase() && c.id !== excludeId
         );
 
         if (existing) {
@@ -368,35 +406,27 @@ export const useCategoriesStore = create<CategoriesState>()(
 
 // Hook para usar categorias filtradas e ordenadas
 export const useFilteredCategories = () => {
-  const { 
-    categories, 
-    filters, 
-    sortBy, 
-    searchQuery,
-    getCategoriesByType,
-    getFavoriteCategories,
-  } = useCategoriesStore();
+  const { categories, filters, sortBy, searchQuery, getCategoriesByType, getFavoriteCategories } =
+    useCategoriesStore();
 
   let filtered = [...categories];
 
   // Aplicar filtros
   if (filters.type) {
-    filtered = filtered.filter(c => c.type === filters.type);
+    filtered = filtered.filter((c) => c.type === filters.type);
   }
 
   if (filters.favoritesOnly) {
-    filtered = filtered.filter(c => c.isFavorite);
+    filtered = filtered.filter((c) => c.isFavorite);
   }
 
   if (filters.systemOnly) {
-    filtered = filtered.filter(c => c.isSystem);
+    filtered = filtered.filter((c) => c.isSystem);
   }
 
   if (searchQuery) {
     const query = searchQuery.toLowerCase();
-    filtered = filtered.filter(c => 
-      c.name.toLowerCase().includes(query)
-    );
+    filtered = filtered.filter((c) => c.name.toLowerCase().includes(query));
   }
 
   // Aplicar ordenação

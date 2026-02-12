@@ -58,7 +58,7 @@ export const createDeletionToastSuccess = (
     }
     default:
       title = `${elementType.charAt(0).toUpperCase() + elementType.slice(1)} excluída`;
-      message = elementName 
+      message = elementName
         ? `"${elementName}" foi excluído com sucesso`
         : `${elementType} foi excluído com sucesso`;
   }
@@ -161,5 +161,12 @@ export const showTransactionDeletedToast = (
   isSuccess: boolean = true,
   errorReason?: string
 ) => {
-  showDeletionToast(showToast, DELETION_ELEMENTS.TRANSACTION, description, isSuccess, errorReason, amount);
+  showDeletionToast(
+    showToast,
+    DELETION_ELEMENTS.TRANSACTION,
+    description,
+    isSuccess,
+    errorReason,
+    amount
+  );
 };

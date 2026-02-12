@@ -1,0 +1,344 @@
+/**
+ * Design System - Card Components
+ * Sistema padronizado para cards de transações e itens de lista
+ * 
+ * Princípios:
+ * - Consistência visual em toda a aplicação
+ * - Hierarquia de informações clara
+ * - Estados de interação definidos
+ * - Responsividade garantida
+ */
+
+@layer components {
+  /* ============================================
+     BASE CARD - Estrutura fundamental
+     ============================================ */
+  .card-base {
+    @apply relative flex items-center justify-between p-3 sm:p-4 rounded-lg border transition-all duration-200;
+    @apply bg-card border-border;
+  }
+
+  .card-base:hover {
+    @apply border-border/80 shadow-sm;
+  }
+
+  .card-base:focus-visible {
+    @apply outline-none ring-2 ring-primary ring-offset-2 ring-offset-background;
+  }
+
+  /* ============================================
+     TRANSACTION CARD - Cards de transação
+     ============================================ */
+  .card-transaction {
+    @apply card-base min-h-[80px];
+    @apply hover:shadow-md;
+  }
+
+  /* Variantes por tipo de transação */
+  .card-transaction--income {
+    @apply border-l-4 border-l-green-500;
+  }
+
+  .card-transaction--expense {
+    @apply border-l-4 border-l-orange-500;
+  }
+
+  .card-transaction--neutral {
+    @apply border-l-4 border-l-muted-foreground/30;
+  }
+
+  /* Estado selecionado */
+  .card-transaction--selected {
+    @apply bg-primary/5 border-primary/50 ring-1 ring-primary/30;
+  }
+
+  /* Estado desabilitado */
+  .card-transaction--disabled {
+    @apply opacity-50 cursor-not-allowed pointer-events-none;
+  }
+
+  /* ============================================
+     CARD CONTENT - Estrutura interna
+     ============================================ */
+  .card-content {
+    @apply flex items-center gap-3 sm:gap-4 min-w-0 flex-1;
+  }
+
+  .card-icon {
+    @apply w-10 h-10 sm:w-12 sm:h-12 rounded-full flex items-center justify-center flex-shrink-0;
+    @apply transition-transform duration-200;
+  }
+
+  .card-transaction:hover .card-icon {
+    @apply scale-105;
+  }
+
+  .card-info {
+    @apply min-w-0 flex-1;
+  }
+
+  .card-title {
+    @apply font-medium text-sm sm:text-base truncate text-foreground;
+    @apply leading-tight;
+  }
+
+  .card-meta {
+    @apply text-xs sm:text-sm text-muted-foreground flex items-center gap-1 sm:gap-2 mt-0.5;
+  }
+
+  .card-meta-separator {
+    @apply flex-shrink-0 text-muted-foreground/50;
+  }
+
+  /* ============================================
+     CARD ACTIONS - Botões de ação
+     ============================================ */
+  .card-actions {
+    @apply flex items-center gap-1 sm:gap-2 flex-shrink-0;
+  }
+
+  .card-action-btn {
+    @apply p-1.5 sm:p-2 rounded-full transition-all duration-200;
+    @apply text-muted-foreground hover:text-foreground hover:bg-muted;
+  }
+
+  .card-action-btn--danger {
+    @apply hover:text-red-500 hover:bg-red-500/10;
+  }
+
+  .card-action-btn--primary {
+    @apply hover:text-primary hover:bg-primary/10;
+  }
+
+  /* ============================================
+     CARD AMOUNT - Valores monetários
+     ============================================ */
+  .card-amount {
+    @apply font-bold text-sm sm:text-base whitespace-nowrap;
+  }
+
+  .card-amount--income {
+    @apply text-green-500;
+  }
+
+  .card-amount--expense {
+    @apply text-orange-500;
+  }
+
+  .card-amount--neutral {
+    @apply text-foreground;
+  }
+
+  /* ============================================
+     BANK ACCOUNT CARD - Contas bancárias
+     ============================================ */
+  .card-account {
+    @apply card-base flex-col items-stretch gap-3;
+  }
+
+  .card-account__header {
+    @apply flex items-start justify-between gap-3;
+  }
+
+  .card-account__info {
+    @apply flex items-center gap-3 flex-1 min-w-0;
+  }
+
+  .card-account__icon {
+    @apply w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0;
+  }
+
+  .card-account__details {
+    @apply min-w-0 flex-1;
+  }
+
+  .card-account__name {
+    @apply font-medium text-sm sm:text-base truncate;
+  }
+
+  .card-account__type {
+    @apply text-xs sm:text-sm text-muted-foreground;
+  }
+
+  .card-account__footer {
+    @apply flex items-center justify-between pt-3 border-t border-border/50;
+  }
+
+  /* ============================================
+     STATUS BADGES - Indicadores de status
+     ============================================ */
+  .status-badge {
+    @apply px-2 py-0.5 rounded-full text-xs font-medium;
+  }
+
+  .status-badge--active {
+    @apply bg-green-100 text-green-700 dark:bg-green-900/50 dark:text-green-300;
+  }
+
+  .status-badge--error {
+    @apply bg-red-100 text-red-700 dark:bg-red-900/50 dark:text-red-300;
+  }
+
+  .status-badge--warning {
+    @apply bg-yellow-100 text-yellow-700 dark:bg-yellow-900/50 dark:text-yellow-300;
+  }
+
+  .status-badge--info {
+    @apply bg-blue-100 text-blue-700 dark:bg-blue-900/50 dark:text-blue-300;
+  }
+
+  .status-badge--neutral {
+    @apply bg-muted text-muted-foreground;
+  }
+
+  /* ============================================
+     COMPACT CARD - Versão compacta
+     ============================================ */
+  .card-compact {
+    @apply flex items-center justify-between py-2 px-3 rounded-md;
+    @apply hover:bg-muted/50 transition-colors;
+  }
+
+  .card-compact__content {
+    @apply flex items-center gap-2 min-w-0 flex-1;
+  }
+
+  .card-compact__icon {
+    @apply w-6 h-6 flex items-center justify-center flex-shrink-0;
+  }
+
+  .card-compact__title {
+    @apply text-sm truncate text-muted-foreground;
+  }
+
+  .card-compact__amount {
+    @apply text-sm font-medium whitespace-nowrap;
+  }
+
+  /* ============================================
+     EMPTY STATE - Estado vazio
+     ============================================ */
+  .empty-state {
+    @apply text-center py-8 sm:py-12;
+  }
+
+  .empty-state__icon {
+    @apply w-12 h-12 sm:w-16 sm:h-16 mx-auto mb-4 rounded-full flex items-center justify-center;
+    @apply bg-muted text-muted-foreground;
+  }
+
+  .empty-state__title {
+    @apply text-base sm:text-lg font-medium text-foreground;
+  }
+
+  .empty-state__description {
+    @apply text-sm text-muted-foreground mt-1;
+  }
+
+  /* ============================================
+     SKELETON LOADING - Estados de carregamento
+     ============================================ */
+  .card-skeleton {
+    @apply flex items-center gap-3 sm:gap-4 p-3 sm:p-4 rounded-lg border border-border/50;
+    @apply bg-card/50;
+  }
+
+  .card-skeleton__icon {
+    @apply w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-muted animate-pulse flex-shrink-0;
+  }
+
+  .card-skeleton__content {
+    @apply flex-1 space-y-2 min-w-0;
+  }
+
+  .card-skeleton__title {
+    @apply h-4 w-3/4 bg-muted animate-pulse rounded;
+  }
+
+  .card-skeleton__meta {
+    @apply h-3 w-1/2 bg-muted animate-pulse rounded;
+  }
+
+  .card-skeleton__amount {
+    @apply h-4 w-20 bg-muted animate-pulse rounded flex-shrink-0;
+  }
+
+  /* ============================================
+     RESPONSIVE UTILITIES
+     ============================================ */
+  @media (max-width: 640px) {
+    .card-transaction {
+      @apply p-3;
+    }
+
+    .card-icon {
+      @apply w-9 h-9;
+    }
+
+    .card-title {
+      @apply text-sm;
+    }
+
+    .card-meta {
+      @apply text-xs;
+    }
+
+    .card-amount {
+      @apply text-sm;
+    }
+
+    .card-action-btn {
+      @apply p-1.5;
+    }
+  }
+
+  /* ============================================
+     ANIMATIONS
+     ============================================ */
+  @keyframes card-enter {
+    from {
+      opacity: 0;
+      transform: translateY(8px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  .card-animate-enter {
+    animation: card-enter 0.3s ease-out forwards;
+  }
+
+  /* Stagger animation para listas */
+  .card-list > *:nth-child(1) {
+    animation-delay: 0ms;
+  }
+  .card-list > *:nth-child(2) {
+    animation-delay: 50ms;
+  }
+  .card-list > *:nth-child(3) {
+    animation-delay: 100ms;
+  }
+  .card-list > *:nth-child(4) {
+    animation-delay: 150ms;
+  }
+  .card-list > *:nth-child(5) {
+    animation-delay: 200ms;
+  }
+  .card-list > *:nth-child(6) {
+    animation-delay: 250ms;
+  }
+  .card-list > *:nth-child(7) {
+    animation-delay: 300ms;
+  }
+  .card-list > *:nth-child(8) {
+    animation-delay: 350ms;
+  }
+  .card-list > *:nth-child(9) {
+    animation-delay: 400ms;
+  }
+  .card-list > *:nth-child(10) {
+    animation-delay: 450ms;
+  }
+}

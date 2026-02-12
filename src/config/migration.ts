@@ -31,13 +31,13 @@ const MIGRATIONS: Migration[] = [
  */
 export function migrateData<T = any>(key: string, data: T): T {
   const storedVersion = getDataVersion(key);
-  
+
   if (storedVersion >= CURRENT_SCHEMA_VERSION) {
     return data;
   }
 
   let migratedData = data;
-  
+
   for (const migration of MIGRATIONS) {
     if (migration.version > storedVersion) {
       console.log(`[Migration] Aplicando migração v${migration.version}`);

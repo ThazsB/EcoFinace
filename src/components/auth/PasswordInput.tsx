@@ -23,12 +23,15 @@ export function PasswordInput({
 }: PasswordInputProps) {
   const [showPassword, setShowPassword] = useState(false);
 
-  const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' && onSubmit) {
-      e.preventDefault();
-      onSubmit();
-    }
-  }, [onSubmit]);
+  const handleKeyDown = useCallback(
+    (e: React.KeyboardEvent) => {
+      if (e.key === 'Enter' && onSubmit) {
+        e.preventDefault();
+        onSubmit();
+      }
+    },
+    [onSubmit]
+  );
 
   const getPasswordStrength = () => {
     if (!value) return { level: 0, label: '' };
@@ -65,9 +68,10 @@ export function PasswordInput({
             w-full pl-12 pr-12 py-4 bg-muted rounded-xl
             border-2 outline-none transition-all duration-200
             focus:ring-2 focus:ring-primary/20
-            ${error 
-              ? 'border-red-500 focus:border-red-500 shake-animation' 
-              : 'border-border focus:border-primary'
+            ${
+              error
+                ? 'border-red-500 focus:border-red-500 shake-animation'
+                : 'border-border focus:border-primary'
             }
           `}
         />

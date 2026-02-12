@@ -2,16 +2,55 @@
  * Tipos para o sistema de categorias personalizadas do Fins
  */
 
-import { 
-  Wallet, CreditCard, Banknote, PiggyBank, TrendingUp, TrendingDown, DollarSign,
-  Home, Building, Wrench, Lightbulb, Droplet,
-  Car, Bus, Train, Plane, Fuel,
-  Utensils, Coffee, ShoppingCart, Milk, Wine,
-  HeartPulse, Pill, Stethoscope, Activity,
-  Gamepad2, Film, Music, Book, Camera, TreeDeciduous, Trees,
-  GraduationCap, School, Laptop,
-  ShoppingBag, Gift, Sparkles, User, PawPrint,
-  Briefcase, Users, Phone, Mail, Folder, Tag, MoreHorizontal
+import {
+  Wallet,
+  CreditCard,
+  Banknote,
+  PiggyBank,
+  TrendingUp,
+  TrendingDown,
+  DollarSign,
+  Home,
+  Building,
+  Wrench,
+  Lightbulb,
+  Droplet,
+  Car,
+  Bus,
+  Train,
+  Plane,
+  Fuel,
+  Utensils,
+  Coffee,
+  ShoppingCart,
+  Milk,
+  Wine,
+  HeartPulse,
+  Pill,
+  Stethoscope,
+  Activity,
+  Gamepad2,
+  Film,
+  Music,
+  Book,
+  Camera,
+  TreeDeciduous,
+  Trees,
+  GraduationCap,
+  School,
+  Laptop,
+  ShoppingBag,
+  Gift,
+  Sparkles,
+  User,
+  PawPrint,
+  Briefcase,
+  Users,
+  Phone,
+  Mail,
+  Folder,
+  Tag,
+  MoreHorizontal,
 } from 'lucide-react';
 
 // Tipo de transação para a categoria
@@ -100,34 +139,34 @@ export const CATEGORY_ICONS: CategoryIcon[] = [
   { id: 'trending-up', name: 'Tendência Alta', icon: 'trending-up', component: TrendingUp },
   { id: 'trending-down', name: 'Tendência Baixa', icon: 'trending-down', component: TrendingDown },
   { id: 'dollar-sign', name: 'Símbolo Dólar', icon: 'dollar-sign', component: DollarSign },
-  
+
   // Casa e Moradia
   { id: 'home', name: 'Casa', icon: 'home', component: Home },
   { id: 'building', name: 'Prédio', icon: 'building', component: Building },
   { id: 'wrench', name: 'Ferramentas', icon: 'wrench', component: Wrench },
   { id: 'lightbulb', name: 'Conta de Luz', icon: 'lightbulb', component: Lightbulb },
   { id: 'droplet', name: 'Água', icon: 'droplet', component: Droplet },
-  
+
   // Transporte
   { id: 'car', name: 'Carro', icon: 'car', component: Car },
   { id: 'bus', name: 'Ônibus', icon: 'bus', component: Bus },
   { id: 'train', name: 'Metrô/Trem', icon: 'train', component: Train },
   { id: 'plane', name: 'Avião', icon: 'plane', component: Plane },
   { id: 'fuel', name: 'Combustível', icon: 'fuel', component: Fuel },
-  
+
   // Alimentação
   { id: 'utensils', name: 'Restaurante', icon: 'utensils', component: Utensils },
   { id: 'coffee', name: 'Café', icon: 'coffee', component: Coffee },
   { id: 'shopping-cart', name: 'Mercado', icon: 'shopping-cart', component: ShoppingCart },
   { id: 'milk', name: 'Laticínios', icon: 'milk', component: Milk },
   { id: 'wine', name: 'Bebidas', icon: 'wine', component: Wine },
-  
+
   // Saúde
   { id: 'heart-pulse', name: 'Saúde', icon: 'heart-pulse', component: HeartPulse },
   { id: 'pill', name: 'Remédios', icon: 'pill', component: Pill },
   { id: 'stethoscope', name: 'Médico', icon: 'stethoscope', component: Stethoscope },
   { id: 'activity', name: 'Academia', icon: 'activity', component: Activity },
-  
+
   // Lazer
   { id: 'gamepad', name: 'Jogos', icon: 'gamepad', component: Gamepad2 },
   { id: 'film', name: 'Cinema', icon: 'film', component: Film },
@@ -135,25 +174,25 @@ export const CATEGORY_ICONS: CategoryIcon[] = [
   { id: 'book', name: 'Livros', icon: 'book', component: Book },
   { id: 'camera', name: 'Foto', icon: 'camera', component: Camera },
   { id: 'trees', name: 'Natureza', icon: 'trees', component: Trees },
-  
+
   // Educação
   { id: 'graduation-cap', name: 'Educação', icon: 'graduation-cap', component: GraduationCap },
   { id: 'school', name: 'Escola', icon: 'school', component: School },
   { id: 'laptop', name: 'Tecnologia', icon: 'laptop', component: Laptop },
-  
+
   // Pessoal
   { id: 'shopping-bag', name: 'Roupas', icon: 'shopping-bag', component: ShoppingBag },
   { id: 'gift', name: 'Presentes', icon: 'gift', component: Gift },
   { id: 'sparkles', name: 'Beleza', icon: 'sparkles', component: Sparkles },
   { id: 'user', name: 'Criança', icon: 'user', component: User },
   { id: 'paw-print', name: 'Animais', icon: 'paw-print', component: PawPrint },
-  
+
   // Trabalho
   { id: 'briefcase', name: 'Trabalho', icon: 'briefcase', component: Briefcase },
   { id: 'users', name: 'Networking', icon: 'users', component: Users },
   { id: 'phone', name: 'Telefone', icon: 'phone', component: Phone },
   { id: 'mail', name: 'Email', icon: 'mail', component: Mail },
-  
+
   // Outros
   { id: 'folder', name: 'Arquivos', icon: 'folder', component: Folder },
   { id: 'tag', name: 'Tag', icon: 'tag', component: Tag },
@@ -215,7 +254,7 @@ export const DEFAULT_SYSTEM_CATEGORIES: Category[] = [
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
   },
-  
+
   // Despesas
   {
     id: 'food',

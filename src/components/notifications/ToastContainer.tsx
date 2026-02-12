@@ -6,8 +6,9 @@
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { createPortal } from 'react-dom';
-import { useNotificationsStore } from '../../stores/notificationsStore';
 import type { ToastType, TransactionType } from '../../types/notifications';
+import { StringSimilarity } from '../../utils/similarity/stringSimilarity';
+import { checkToastDuplicate } from '../../services/deduplicationService';
 import {
   X,
   CheckCircle,
@@ -53,56 +54,63 @@ const getToastColors = (type: ToastType, transactionType?: TransactionType) => {
   // Se for transação de despesa, usar tons vermelhos mesmo no "sucesso"
   if (transactionType === 'expense') {
     return {
-      border: 'border-l-red-500 bg-gradient-to-r from-red-500/20 to-red-500/5 dark:from-red-500/10 dark:to-red-500/5',
+      border:
+        'border-l-red-500 bg-gradient-to-r from-red-500/20 to-red-500/5 dark:from-red-500/10 dark:to-red-500/5',
       iconBg: 'bg-red-100 dark:bg-red-900/50',
       iconColor: 'text-red-600 dark:text-red-400',
       progress: 'bg-red-500',
     };
   }
-  
+
   // Se for receita, usar tons verdes
   if (transactionType === 'income') {
     return {
-      border: 'border-l-green-500 bg-gradient-to-r from-green-500/20 to-green-500/5 dark:from-green-500/10 dark:to-green-500/5',
+      border:
+        'border-l-green-500 bg-gradient-to-r from-green-500/20 to-green-500/5 dark:from-green-500/10 dark:to-green-500/5',
       iconBg: 'bg-green-100 dark:bg-green-900/50',
       iconColor: 'text-green-600 dark:text-green-400',
       progress: 'bg-green-500',
     };
   }
-  
+
   const colors = {
     success: {
-      border: 'border-l-green-500 bg-gradient-to-r from-green-500/20 to-green-500/5 dark:from-green-500/10 dark:to-green-500/5',
+      border:
+        'border-l-green-500 bg-gradient-to-r from-green-500/20 to-green-500/5 dark:from-green-500/10 dark:to-green-500/5',
       iconBg: 'bg-green-100 dark:bg-green-900/50',
       iconColor: 'text-green-600 dark:text-green-400',
       progress: 'bg-green-500',
     },
     error: {
-      border: 'border-l-red-500 bg-gradient-to-r from-red-500/20 to-red-500/5 dark:from-red-500/10 dark:to-red-500/5',
+      border:
+        'border-l-red-500 bg-gradient-to-r from-red-500/20 to-red-500/5 dark:from-red-500/10 dark:to-red-500/5',
       iconBg: 'bg-red-100 dark:bg-red-900/50',
       iconColor: 'text-red-600 dark:text-red-400',
       progress: 'bg-red-500',
     },
     warning: {
-      border: 'border-l-yellow-500 bg-gradient-to-r from-yellow-500/20 to-yellow-500/5 dark:from-yellow-500/10 dark:to-yellow-500/5',
+      border:
+        'border-l-yellow-500 bg-gradient-to-r from-yellow-500/20 to-yellow-500/5 dark:from-yellow-500/10 dark:to-yellow-500/5',
       iconBg: 'bg-yellow-100 dark:bg-yellow-900/50',
       iconColor: 'text-yellow-600 dark:text-yellow-400',
       progress: 'bg-yellow-500',
     },
     info: {
-      border: 'border-l-blue-500 bg-gradient-to-r from-blue-500/20 to-blue-500/5 dark:from-blue-500/10 dark:to-blue-500/5',
+      border:
+        'border-l-blue-500 bg-gradient-to-r from-blue-500/20 to-blue-500/5 dark:from-blue-500/10 dark:to-blue-500/5',
       iconBg: 'bg-blue-100 dark:bg-blue-900/50',
       iconColor: 'text-blue-600 dark:text-blue-400',
       progress: 'bg-blue-500',
     },
     delete: {
-      border: 'border-l-gray-500 bg-gradient-to-r from-gray-500/20 to-gray-500/5 dark:from-gray-500/10 dark:to-gray-500/5',
+      border:
+        'border-l-gray-500 bg-gradient-to-r from-gray-500/20 to-gray-500/5 dark:from-gray-500/10 dark:to-gray-500/5',
       iconBg: 'bg-gray-100 dark:bg-gray-900/50',
       iconColor: 'text-gray-600 dark:text-gray-400',
       progress: 'bg-gray-500',
     },
   };
-  
+
   return colors[type] || colors.info;
 };
 
@@ -112,7 +120,7 @@ const getToastIcon = (type: ToastType, transactionType?: string) => {
   if (type === 'delete') {
     return <Trash2 className="w-5 h-5" />;
   }
-  
+
   // Transações têm ícones específicos
   if (transactionType === 'expense') {
     return <ArrowDownCircle className="w-5 h-5" />;
@@ -120,7 +128,7 @@ const getToastIcon = (type: ToastType, transactionType?: string) => {
   if (transactionType === 'income') {
     return <ArrowUpCircle className="w-5 h-5" />;
   }
-  
+
   const icons = {
     success: <CheckCircle className="w-5 h-5" />,
     error: <AlertCircle className="w-5 h-5" />,
@@ -128,7 +136,7 @@ const getToastIcon = (type: ToastType, transactionType?: string) => {
     info: <Info className="w-5 h-5" />,
     delete: <Trash2 className="w-5 h-5" />,
   };
-  
+
   return icons[type] || icons.info;
 };
 
@@ -191,12 +199,8 @@ const Toast: React.FC<ToastProps> = ({ item, onClose }) => {
 
       {/* Content */}
       <div className="flex-1 min-w-0">
-        <h4 className="font-medium text-foreground text-sm md:text-base">
-          {item.title}
-        </h4>
-        <p className="text-sm text-muted-foreground mt-0.5 line-clamp-2">
-          {item.message}
-        </p>
+        <h4 className="font-medium text-foreground text-sm md:text-base">{item.title}</h4>
+        <p className="text-sm text-muted-foreground mt-0.5 line-clamp-2">{item.message}</p>
 
         {/* Action Buttons */}
         {item.action && (
@@ -208,9 +212,11 @@ const Toast: React.FC<ToastProps> = ({ item, onClose }) => {
               }}
               className={`
                 text-sm font-medium px-3 py-1.5 rounded transition-colors
-                ${item.action.primary
-                  ? 'bg-primary text-primary-foreground hover:bg-primary/90'
-                  : 'bg-accent text-accent-foreground hover:bg-accent/80'}
+                ${
+                  item.action.primary
+                    ? 'bg-primary text-primary-foreground hover:bg-primary/90'
+                    : 'bg-accent text-accent-foreground hover:bg-accent/80'
+                }
               `}
             >
               <span className="flex items-center gap-1">
@@ -218,7 +224,7 @@ const Toast: React.FC<ToastProps> = ({ item, onClose }) => {
                 {item.action.label}
               </span>
             </button>
-            
+
             {/* Retry Button for Error Toasts */}
             {item.type === 'error' && item.retryAction && (
               <button
@@ -268,6 +274,8 @@ export const ToastContainer: React.FC = () => {
   const [queue, setQueue] = useState<ToastItem[]>([]);
   const [isProcessing, setIsProcessing] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
+  const [lastDataLoadingToastTime, setLastDataLoadingToastTime] = useState<number>(0);
+  const [dataLoadingToastId, setDataLoadingToastId] = useState<string | null>(null);
 
   // Detectar se é mobile
   useEffect(() => {
@@ -286,7 +294,7 @@ export const ToastContainer: React.FC = () => {
   useEffect(() => {
     if (queue.length > 0 && toasts.length < maxToasts && !isProcessing) {
       setIsProcessing(true);
-      
+
       const processNext = () => {
         const nextToast = queue[0];
         setToasts((prev) => [...prev, nextToast]);
@@ -298,6 +306,14 @@ export const ToastContainer: React.FC = () => {
       setTimeout(processNext, TOAST_DISPLAY_INTERVAL);
     }
   }, [queue, toasts.length, maxToasts, isProcessing]);
+
+  // Configurações de debounce
+  const DEBOUNCE_TIME = 3000; // 3 segundos
+  const DUPLICATE_THRESHOLD = 0.85; // 85% de similaridade
+
+  // Estado para debounce
+  const [lastToastTime, setLastToastTime] = useState<number>(0);
+  const [lastToastContent, setLastToastContent] = useState<string>('');
 
   // Listen for toast events
   useEffect(() => {
@@ -312,6 +328,62 @@ export const ToastContainer: React.FC = () => {
         transactionType,
       } = event.detail;
 
+      const currentTime = Date.now();
+      const contentHash = `${type}:${title}:${message}`;
+
+      // Verificar debounce
+      const timeSinceLast = currentTime - lastToastTime;
+      const isWithinDebounce = timeSinceLast < DEBOUNCE_TIME;
+      const isSimilarContent = StringSimilarity.quickCheck(
+        lastToastContent,
+        contentHash,
+        DUPLICATE_THRESHOLD
+      );
+
+      // Se for dentro do debounce e conteúdo similar, atualizar o existente
+      if (isWithinDebounce && isSimilarContent) {
+        setToasts((prev) =>
+          prev.map((t) =>
+            t.title === title && t.message === message ? { ...t, createdAt: currentTime } : t
+          )
+        );
+        return;
+      }
+
+      // Verificar duplicata usando o serviço de deduplicação (mais robusto)
+      const isDuplicate = checkToastDuplicate(title, message, 'system').isDuplicate;
+
+      if (isDuplicate) {
+        // Atualizar timestamp do toast existente em vez de criar novo
+        setToasts((prev) =>
+          prev.map((t) =>
+            t.title === title && t.message === message ? { ...t, createdAt: currentTime } : t
+          )
+        );
+        return;
+      }
+
+      // Verificar duplicata adicional para toasts de carregamento de dados
+      const isLoadingToast =
+        message.toLowerCase().includes('carregando dados') ||
+        message.toLowerCase().includes('preparando seu painel financeiro');
+      const isDataLoadedToast = message.toLowerCase().includes('dados carregados');
+
+      if (isLoadingToast && dataLoadingToastId) {
+        // Se já houver um toast de carregamento e vier outro toast de carregamento,
+        // apenas atualizar timestamp e impedir duplicação
+        setToasts((prev) =>
+          prev.map((t) => (t.id === dataLoadingToastId ? { ...t, createdAt: currentTime } : t))
+        );
+        return;
+      }
+
+      // Se for toast de "Dados carregados", limpar o ID de carregamento anterior
+      // para permitir que o toast de sucesso seja criado
+      if (isDataLoadedToast && dataLoadingToastId) {
+        setDataLoadingToastId(null);
+      }
+
       const id = crypto.randomUUID();
       const newToast: ToastItem = {
         id,
@@ -321,22 +393,18 @@ export const ToastContainer: React.FC = () => {
         duration,
         action,
         retryAction,
-        createdAt: Date.now(),
+        createdAt: currentTime,
         transactionType,
       };
 
-      // Usar o sistema de detecção de duplicatas do store (fuzzy matching)
-      const isDuplicate = useNotificationsStore.getState().hasDuplicateNotification(title, message, type);
-
-      if (isDuplicate) {
-        // Atualizar timestamp do toast existente em vez de criar novo
-        setToasts((prev) =>
-          prev.map((t) =>
-            t.title === title && t.message === message ? { ...t, createdAt: Date.now() } : t
-          )
-        );
-        return;
+      // Registrar ID do toast de carregamento se for um toast de carregamento
+      if (isLoadingToast) {
+        setDataLoadingToastId(id);
       }
+
+      // Atualizar estado de debounce
+      setLastToastTime(currentTime);
+      setLastToastContent(contentHash);
 
       // Adicionar à fila se limite atingido
       if (toasts.length >= maxToasts) {
@@ -347,14 +415,20 @@ export const ToastContainer: React.FC = () => {
     };
 
     window.addEventListener('app-toast', handleToast as EventListener);
-    return () =>
-      window.removeEventListener('app-toast', handleToast as EventListener);
-  }, [toasts.length, queue.length, maxToasts]);
+    return () => window.removeEventListener('app-toast', handleToast as EventListener);
+  }, [toasts.length, queue.length, maxToasts, lastToastTime, lastToastContent, dataLoadingToastId]);
 
   // Remover toast
-  const removeToast = useCallback((id: string) => {
-    setToasts((prev) => prev.filter((t) => t.id !== id));
-  }, []);
+  const removeToast = useCallback(
+    (id: string) => {
+      setToasts((prev) => prev.filter((t) => t.id !== id));
+      // Limpar ID do toast de carregamento se for o toast que está sendo removido
+      if (dataLoadingToastId === id) {
+        setDataLoadingToastId(null);
+      }
+    },
+    [dataLoadingToastId]
+  );
 
   // Render via portal para evitar problemas de z-index
   if (typeof document === 'undefined') return null;
@@ -369,14 +443,19 @@ export const ToastContainer: React.FC = () => {
         md:w-auto
         pointer-events-none
         ${isMobile ? 'bottom-4 right-4' : 'bottom-6 right-6'}
+        force-size
       `}
+      style={{
+        width: '100%',
+        maxWidth: isMobile ? '24rem' : '28rem',
+      }}
       aria-live="polite"
       aria-label="Notificações"
     >
       {toasts.map((toast) => (
         <Toast key={toast.id} item={toast} onClose={removeToast} />
       ))}
-      
+
       {/* Fila de espera */}
       {queue.length > 0 && (
         <div className="text-xs text-muted-foreground text-center mt-2">
@@ -390,17 +469,20 @@ export const ToastContainer: React.FC = () => {
 
 // Hook useToast - hook básico para mostrar toasts
 export const useToast = () => {
-  const showToast = useCallback((toast: {
-    title: string;
-    message: string;
-    type?: ToastType;
-    duration?: number;
-    action?: ToastAction;
-    retryAction?: () => void;
-    transactionType?: TransactionType;
-  }) => {
-    window.dispatchEvent(new CustomEvent('app-toast', { detail: toast }));
-  }, []);
+  const showToast = useCallback(
+    (toast: {
+      title: string;
+      message: string;
+      type?: ToastType;
+      duration?: number;
+      action?: ToastAction;
+      retryAction?: () => void;
+      transactionType?: TransactionType;
+    }) => {
+      window.dispatchEvent(new CustomEvent('app-toast', { detail: toast }));
+    },
+    []
+  );
 
   return { showToast };
 };
@@ -432,12 +514,21 @@ export const notify = ({
   );
 };
 
-import { TOAST_MESSAGES, formatCurrencyForToast, getTransactionTypePortuguese } from '../../utils/toast-messages';
+import {
+  TOAST_MESSAGES,
+  formatCurrencyForToast,
+  getTransactionTypePortuguese,
+} from '../../utils/toast-messages';
 
 // Hook useTransactionToast - hook especializado para notificações de transações
 export const useTransactionToast = () => {
   const showTransactionSuccess = useCallback(
-    (data: { type: 'income' | 'expense'; action: 'add' | 'edit'; description: string; amount: number }) => {
+    (data: {
+      type: 'income' | 'expense';
+      action: 'add' | 'edit';
+      description: string;
+      amount: number;
+    }) => {
       const { type: transactionType, action, description, amount } = data;
 
       const transactionTypePT = getTransactionTypePortuguese(transactionType);
@@ -471,7 +562,13 @@ export const useTransactionToast = () => {
   );
 
   const showTransactionError = useCallback(
-    (data: { type: 'income' | 'expense'; description: string; amount: number; error?: string; retryAction?: () => void }) => {
+    (data: {
+      type: 'income' | 'expense';
+      description: string;
+      amount: number;
+      error?: string;
+      retryAction?: () => void;
+    }) => {
       const { type: transactionType, description, amount, error, retryAction } = data;
 
       const transactionTypePT = getTransactionTypePortuguese(transactionType);
@@ -521,25 +618,22 @@ export const useTransactionToast = () => {
 
 // Hook useGoalToast - hook especializado para notificações de metas
 export const useGoalToast = () => {
-  const showGoalCreated = useCallback(
-    (data: { name: string; target: number }) => {
-      const { name, target } = data;
-      const formattedTarget = formatCurrencyForToast(target);
-      const messageConfig = TOAST_MESSAGES.GOAL.CREATED;
+  const showGoalCreated = useCallback((data: { name: string; target: number }) => {
+    const { name, target } = data;
+    const formattedTarget = formatCurrencyForToast(target);
+    const messageConfig = TOAST_MESSAGES.GOAL.CREATED;
 
-      window.dispatchEvent(
-        new CustomEvent('app-toast', {
-          detail: {
-            title: messageConfig.TITLE,
-            message: messageConfig.MESSAGE(name, formattedTarget),
-            type: 'success',
-            duration: TOAST_DURATION,
-          },
-        })
-      );
-    },
-    []
-  );
+    window.dispatchEvent(
+      new CustomEvent('app-toast', {
+        detail: {
+          title: messageConfig.TITLE,
+          message: messageConfig.MESSAGE(name, formattedTarget),
+          type: 'success',
+          duration: TOAST_DURATION,
+        },
+      })
+    );
+  }, []);
 
   const showGoalContribution = useCallback(
     (data: { name: string; current: number; target: number }) => {
@@ -582,49 +676,43 @@ export const useGoalToast = () => {
     []
   );
 
-  const showGoalDelete = useCallback(
-    (data: { name: string }) => {
-      const { name } = data;
-      const messageConfig = TOAST_MESSAGES.GOAL.DELETED;
+  const showGoalDelete = useCallback((data: { name: string }) => {
+    const { name } = data;
+    const messageConfig = TOAST_MESSAGES.GOAL.DELETED;
 
-      window.dispatchEvent(
-        new CustomEvent('app-toast', {
-          detail: {
-            title: messageConfig.TITLE,
-            message: messageConfig.MESSAGE(name),
-            type: 'delete',
-            duration: TOAST_DURATION,
-          },
-        })
-      );
-    },
-    []
-  );
+    window.dispatchEvent(
+      new CustomEvent('app-toast', {
+        detail: {
+          title: messageConfig.TITLE,
+          message: messageConfig.MESSAGE(name),
+          type: 'delete',
+          duration: TOAST_DURATION,
+        },
+      })
+    );
+  }, []);
 
   return { showGoalCreated, showGoalContribution, showGoalError, showGoalDelete };
 };
 
 // Hook useBudgetToast - hook especializado para notificações de orçamentos
 export const useBudgetToast = () => {
-  const showBudgetCreated = useCallback(
-    (data: { category: string; limit: number }) => {
-      const { category, limit } = data;
-      const formattedLimit = formatCurrencyForToast(limit);
-      const messageConfig = TOAST_MESSAGES.BUDGET.CREATED;
+  const showBudgetCreated = useCallback((data: { category: string; limit: number }) => {
+    const { category, limit } = data;
+    const formattedLimit = formatCurrencyForToast(limit);
+    const messageConfig = TOAST_MESSAGES.BUDGET.CREATED;
 
-      window.dispatchEvent(
-        new CustomEvent('app-toast', {
-          detail: {
-            title: messageConfig.TITLE,
-            message: messageConfig.MESSAGE(category, formattedLimit),
-            type: 'success',
-            duration: TOAST_DURATION,
-          },
-        })
-      );
-    },
-    []
-  );
+    window.dispatchEvent(
+      new CustomEvent('app-toast', {
+        detail: {
+          title: messageConfig.TITLE,
+          message: messageConfig.MESSAGE(category, formattedLimit),
+          type: 'success',
+          duration: TOAST_DURATION,
+        },
+      })
+    );
+  }, []);
 
   const showBudgetError = useCallback(
     (data: { category: string; error?: string; retryAction?: () => void }) => {
@@ -646,24 +734,21 @@ export const useBudgetToast = () => {
     []
   );
 
-  const showBudgetDelete = useCallback(
-    (data: { category: string }) => {
-      const { category } = data;
-      const messageConfig = TOAST_MESSAGES.BUDGET.DELETED;
+  const showBudgetDelete = useCallback((data: { category: string }) => {
+    const { category } = data;
+    const messageConfig = TOAST_MESSAGES.BUDGET.DELETED;
 
-      window.dispatchEvent(
-        new CustomEvent('app-toast', {
-          detail: {
-            title: messageConfig.TITLE,
-            message: messageConfig.MESSAGE(category),
-            type: 'delete',
-            duration: TOAST_DURATION,
-          },
-        })
-      );
-    },
-    []
-  );
+    window.dispatchEvent(
+      new CustomEvent('app-toast', {
+        detail: {
+          title: messageConfig.TITLE,
+          message: messageConfig.MESSAGE(category),
+          type: 'delete',
+          duration: TOAST_DURATION,
+        },
+      })
+    );
+  }, []);
 
   return { showBudgetCreated, showBudgetError, showBudgetDelete };
 };
