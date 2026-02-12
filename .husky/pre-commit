@@ -1,7 +1,1 @@
-#!/bin/sh
-# Hook do Husky para executar lint-staged antes do commit
-# Garante que apenas código lintado e formatado seja commitado
-
-. "$(dirname "$0")/_/husky.sh"
-
 npx lint-staged
